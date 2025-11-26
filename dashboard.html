@@ -1,0 +1,3026 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4ZERO-APP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    }
+    /* 表の横スクロール対応 */
+    .table-container {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-width: 100%;
+      max-height: calc(100vh - 250px);
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+    /* スクロールバーのスタイル */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+    /* Firefox用 */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #d1d5db transparent;
+    }
+    .table-container table {
+      min-width: 1400px;
+      width: 100%;
+      table-layout: auto;
+    }
+    /* テーブルヘッダー固定 */
+    .table-container thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #f3f4f6;
+    }
+    .table-container thead tr:first-child {
+      background: #f3f4f6;
+    }
+    .table-container thead tr:last-child {
+      background: #f9fafb;
+    }
+    .table-container th,
+    .table-container td {
+      white-space: nowrap;
+      font-size: 0.75rem;
+      border-color: #d1d5db; /* Gray-300 */
+    }
+    /* 施設名列の幅制限と固定 */
+    .table-container th:first-child,
+    .table-container td:first-child {
+      position: sticky;
+      left: 0;
+      max-width: 140px;
+      min-width: 120px;
+      white-space: normal;
+      word-wrap: break-word;
+      z-index: 2;
+    }
+    /* ヘッダーの施設名列の背景 */
+    .table-container thead th:first-child {
+      background: #f3f4f6;
+      z-index: 11;
+    }
+    /* ボディの施設名列の背景 */
+    .table-container tbody td:first-child {
+      background: white;
+    }
+    /* エリア行の施設名列の背景 */
+    .table-container tbody tr.bg-blue-50 td:first-child {
+      background: #eff6ff;
+    }
+    @media (max-width: 1024px) {
+      .table-container th,
+      .table-container td {
+        font-size: 0.7rem;
+        padding: 0.375rem 0.5rem !important;
+      }
+    }
+    /* ドロップダウンスタイル */
+    .facility-dropdown {
+      position: relative;
+      min-height: 42px;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      padding: 0.5rem;
+      background: white;
+      cursor: pointer;
+    }
+    .facility-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .facility-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: #3b82f6;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      font-size: 0.875rem;
+    }
+    .facility-tag button {
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 0;
+      margin-left: 0.25rem;
+      font-weight: bold;
+    }
+    .facility-tag button:hover {
+      opacity: 0.8;
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 0.25rem;
+      background: white;
+      border: 1px solid #d1d5db;
+      border-radius: 0.375rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      max-height: 300px;
+      overflow-y: auto;
+      z-index: 50;
+      display: none;
+    }
+    .dropdown-menu.active {
+      display: block;
+    }
+    .dropdown-group-title {
+      padding: 0.5rem 0.75rem;
+      font-weight: 600;
+      background: #f3f4f6;
+      color: #374151;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+    }
+    .dropdown-group-title input[type="checkbox"] {
+      cursor: pointer;
+    }
+    .dropdown-group-title label {
+      cursor: pointer;
+      flex: 1;
+    }
+    .dropdown-item {
+      padding: 0.5rem 0.75rem 0.5rem 2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .dropdown-item:hover {
+      background: #f3f4f6;
+    }
+    .dropdown-item input[type="checkbox"] {
+      cursor: pointer;
+    }
+    .dropdown-item.hidden {
+      display: none;
+    }
+    .area-facilities {
+      display: block;
+    }
+    .area-facilities.collapsed {
+      display: none;
+    }
+    .dropdown-actions {
+      padding: 0.5rem 0.75rem;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      gap: 0.5rem;
+    }
+    /* タブスタイル */
+    .tab-container {
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 1rem;
+    }
+    .tab-list {
+      display: flex;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .tab-button {
+      padding: 0.5rem 1rem;
+      background: #f3f4f6;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .tab-button:hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .tab-button.active {
+      background: white;
+      color: #2e4265;
+      border-bottom-color: #2e4265;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* 日付単位ボタン */
+    .date-unit-btn {
+      padding: 0.375rem 0.75rem;
+      background: white;
+      border: none;
+      border-right: 1px solid #d1d5db;
+      cursor: pointer;
+      font-size: 0.813rem;
+      transition: all 0.2s;
+    }
+    .date-unit-btn:last-child {
+      border-right: none;
+    }
+    .date-unit-btn:hover {
+      background: #f3f4f6;
+    }
+    .date-unit-btn.active {
+      background: #2563eb;
+      color: white;
+    }
+    /* セクション折りたたみアイコン */
+    .section-toggle-icon {
+      font-size: 0.75rem;
+      transition: transform 0.2s;
+    }
+    /* サイドバー開閉スタイル */
+    .sidebar {
+      transition: width 0.3s ease;
+      width: 16rem;
+      min-width: 16rem;
+      position: fixed;
+      left: 0;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+    .sidebar.closed {
+      width: 56px;
+      min-width: 56px;
+    }
+    .content-wrapper {
+      margin-left: 16rem;
+      margin-top: 64px;
+      transition: margin-left 0.3s ease;
+      width: calc(100% - 16rem);
+    }
+    .sidebar.closed + .content-wrapper {
+      margin-left: 56px;
+      width: calc(100% - 56px);
+    }
+    .sidebar.closed nav {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .sidebar-toggle {
+      position: absolute;
+      left: 8px;
+      bottom: 16px;
+      background: #2e4265;
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .sidebar-toggle:hover {
+      background: #3d5278;
+      transform: scale(1.05);
+    }
+    /* 閉じた時のアイコンメニュー */
+    .sidebar-icons {
+      position: absolute;
+      left: 0;
+      top: 12px;
+      width: 56px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      padding: 8px;
+    }
+    .sidebar.closed .sidebar-icons {
+      display: flex;
+    }
+    .sidebar-icon-item {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #2e4265;
+    }
+    .sidebar-icon-item:hover {
+      background: #3d5278;
+      color: white;
+      transform: scale(1.05);
+    }
+    .sidebar-icon-item.active {
+      background: #2e4265;
+      color: white;
+    }
+    .main-content {
+      flex: 1;
+      transition: margin-left 0.3s ease;
+    }
+    /* レスポンシブ対応 */
+    @media (max-width: 768px) {
+      .sidebar {
+        box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+      }
+      .sidebar.closed {
+        width: 0;
+        min-width: 0;
+      }
+      .sidebar.closed .sidebar-icons {
+        display: none;
+      }
+      .sidebar.closed .sidebar-toggle {
+        left: 12px;
+        top: 80px;
+        position: fixed;
+      }
+      .content-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+      .main-content {
+        padding: 1rem !important;
+      }
+      /* モバイルでのテーブルスクロール */
+      .table-container {
+        margin: 0 -1rem;
+        padding: 0 1rem;
+      }
+    }
+    @media (max-width: 1280px) {
+      .table-container table th:first-child {
+        position: sticky;
+        left: 0;
+        background: #f3f4f6;
+        z-index: 10;
+      }
+      .table-container table td:first-child {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 10;
+      }
+      .table-container table tr:hover td:first-child {
+        background: #f9fafb;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <!-- ヘッダー -->
+  <header class="bg-[#2e4265] text-white px-6 py-4 flex items-center justify-between h-16 fixed top-0 left-0 right-0 z-50">
+    <div class="flex items-center gap-4">
+      <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-[#3d5278] rounded">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <h1 class="text-2xl font-bold">4ZERO-APP</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right">
+        <div class="text-sm">山田 太郎</div>
+        <div class="text-xs text-gray-300">user@squeeze.co.jp</div>
+      </div>
+      <button class="bg-white text-[#2e4265] px-4 py-2 rounded hover:bg-gray-100">
+        管理画面
+      </button>
+    </div>
+  </header>
+
+  <!-- サイドバー -->
+  <aside id="sidebar" class="sidebar w-32 bg-[#e8e8e8]">
+      <!-- 開閉ボタン -->
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <svg id="sidebarIcon" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <!-- 閉じた時のアイコンメニュー -->
+      <div class="sidebar-icons">
+        <div class="sidebar-icon-item active" onclick="switchTab('dashboard')" title="ダッシュボード">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        </div>
+        <div class="sidebar-icon-item" onclick="switchTab('daily')" title="日次データ">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <div class="sidebar-icon-item" onclick="switchTab('4zero')" title="月間サマリー">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div class="sidebar-icon-item" onclick="switchTab('monthly')" title="月間データ">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+      </div>
+
+      <nav>
+        <!-- 4ZERO 親トグル -->
+        <div class="mb-2">
+          <button onclick="toggleFourZero()" class="w-full flex items-center justify-between p-3 hover:bg-gray-300 rounded font-bold">
+            <span>4ZERO</span>
+            <svg id="fourZeroIcon" class="w-4 h-4 transition-transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <div id="fourZeroContent" class="ml-4 mt-1">
+            <!-- 全施設 -->
+            <div class="p-2 pl-4 font-semibold">
+              全施設
+            </div>
+
+            <!-- 集計データ -->
+            <a href="#" onclick="switchTab('daily'); return false;" class="block p-2 pl-4 hover:bg-gray-300 rounded ml-4 text-sm">
+              集計データ
+            </a>
+
+            <!-- エリア別 -->
+            <button onclick="toggleArea()" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded">
+              <span>エリア別</span>
+              <svg id="areaIcon" class="w-4 h-4 transition-transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <div id="areaContent" class="ml-4 mt-1">
+                <!-- 北海道エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('hokkaido')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>北海道</span>
+                    <svg id="hokkaidoIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="hokkaidoContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 千歳</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn house Niseko Hirafu</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">FAV LUX 札幌すすきの</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 札幌大通 西18 Station</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 北広島 Station East</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">ES CON FIELD HOKKAIDO HOTEL Kitahiroshima Station</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">シアテル札幌</a>
+                  </div>
+                </div>
+
+                <!-- 東京エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('tokyo')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>東京</span>
+                    <svg id="tokyoIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="tokyoContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 日本橋</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 浅草かっぱ橋</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 羽田エアポート</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 渋谷神山町</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 蒲田</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 上野新御徒町</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">シアテル羽田Ⅱ</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 浅草</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 上野入谷</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 秋葉原</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 西葛西</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 葛西</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 日本橋水天宮前</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 浅草蔵前 North</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 浅草蔵前 Station</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 上野</a>
+                  </div>
+                </div>
+
+                <!-- 中部エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('chubu')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>中部</span>
+                    <svg id="chubuIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="chubuContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn STATION Ai Nagoya</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">カリオ笹塚</a>
+                  </div>
+                </div>
+
+                <!-- 北陸エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('hokuriku')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>北陸</span>
+                    <svg id="hokurikuIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="hokurikuContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">tower eleven hotel</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 金沢</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">tower eleven onsen & sauna</a>
+                  </div>
+                </div>
+
+                <!-- 京都エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('kyoto')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>京都</span>
+                    <svg id="kyotoIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="kyotoContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 四条大宮</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 河原町五条リバーサイド</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 祇園三条</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 清水五条</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 二条城</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 祇園</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 烏丸五条</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 祇園鴨川</a>
+                  </div>
+                </div>
+
+                <!-- 大阪エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('osaka')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>大阪</span>
+                    <svg id="osakaIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="osakaContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 十三</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 北梅田</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 新大阪</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 東梅田</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 梅田中崎町</a>
+                  </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="content-wrapper">
+    <main class="main-content p-6">
+      <h2 class="text-2xl font-bold mb-2">全施設： ダッシュボード</h2>
+
+      <!-- タブナビゲーション -->
+      <div class="tab-container">
+        <div class="tab-list">
+          <button class="tab-button" onclick="switchTab('dashboard')">ダッシュボード</button>
+          <button class="tab-button active" onclick="switchTab('daily')">施設別 集計比較</button>
+          <button class="tab-button" onclick="switchTab('monthly')">施設別 週間・月間比較</button>
+        </div>
+      </div>
+
+      <!-- タブ0: ダッシュボード -->
+      <section class="tab-content" id="tab-dashboard">
+        <h3 class="text-xl font-bold mb-4 pb-2 border-b-2 border-gray-300">
+          当月の状況
+        </h3>
+
+        <!-- KPIサマリーカード -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          <!-- 売止め数 -->
+          <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm text-gray-600 mb-2">売止め数（当月累計）</h4>
+            <p class="text-3xl font-bold text-blue-600">142件</p>
+            <p class="text-sm text-gray-500 mt-2">前月比: <span class="text-red-500">+12%</span></p>
+          </div>
+
+          <!-- 残業時間 -->
+          <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm text-gray-600 mb-2">残業時間（当月累計）</h4>
+            <p class="text-3xl font-bold text-orange-600">385h</p>
+            <p class="text-sm text-gray-500 mt-2">前月比: <span class="text-green-500">-8%</span></p>
+          </div>
+
+          <!-- クレーム数 -->
+          <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm text-gray-600 mb-2">クレーム数（当月累計）</h4>
+            <p class="text-3xl font-bold text-red-600">28件</p>
+            <p class="text-sm text-gray-500 mt-2">前月比: <span class="text-green-500">-5%</span></p>
+          </div>
+
+          <!-- パフォーマンス平均 -->
+          <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm text-gray-600 mb-2">パフォーマンス平均</h4>
+            <p class="text-3xl font-bold text-green-600">4.2</p>
+            <p class="text-sm text-gray-500 mt-2">前月比: <span class="text-green-500">+0.1</span></p>
+          </div>
+
+          <!-- 清掃基準達成率 -->
+          <div class="bg-white rounded-lg shadow p-6">
+            <h4 class="text-sm text-gray-600 mb-2">清掃基準達成率</h4>
+            <p class="text-3xl font-bold text-purple-600">95.2%</p>
+            <p class="text-sm text-gray-500 mt-2">前月比: <span class="text-green-500">+2.3%</span></p>
+          </div>
+        </div>
+
+        <!-- エリア別サマリー -->
+        <div class="bg-white rounded-lg shadow mb-6">
+          <div class="p-6 border-b">
+            <h4 class="text-lg font-bold">エリア別 当月サマリー</h4>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-3 text-left font-semibold">エリア</th>
+                  <th class="px-4 py-3 text-center font-semibold">施設数</th>
+                  <th class="px-4 py-3 text-center font-semibold">売止め数</th>
+                  <th class="px-4 py-3 text-center font-semibold">残業時間</th>
+                  <th class="px-4 py-3 text-center font-semibold">クレーム数</th>
+                  <th class="px-4 py-3 text-center font-semibold">パフォーマンス</th>
+                  <th class="px-4 py-3 text-center font-semibold">清掃基準達成率</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="px-4 py-3 font-semibold">北海道</td>
+                  <td class="px-4 py-3 text-center">7</td>
+                  <td class="px-4 py-3 text-center">28</td>
+                  <td class="px-4 py-3 text-center">65h</td>
+                  <td class="px-4 py-3 text-center">5</td>
+                  <td class="px-4 py-3 text-center">4.3</td>
+                  <td class="px-4 py-3 text-center text-green-600 font-semibold">96.5%</td>
+                </tr>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="px-4 py-3 font-semibold">東京</td>
+                  <td class="px-4 py-3 text-center">16</td>
+                  <td class="px-4 py-3 text-center">52</td>
+                  <td class="px-4 py-3 text-center">145h</td>
+                  <td class="px-4 py-3 text-center">10</td>
+                  <td class="px-4 py-3 text-center">4.1</td>
+                  <td class="px-4 py-3 text-center text-green-600 font-semibold">94.2%</td>
+                </tr>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="px-4 py-3 font-semibold">中部</td>
+                  <td class="px-4 py-3 text-center">2</td>
+                  <td class="px-4 py-3 text-center">8</td>
+                  <td class="px-4 py-3 text-center">22h</td>
+                  <td class="px-4 py-3 text-center">2</td>
+                  <td class="px-4 py-3 text-center">4.2</td>
+                  <td class="px-4 py-3 text-center text-green-600 font-semibold">95.8%</td>
+                </tr>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="px-4 py-3 font-semibold">北陸</td>
+                  <td class="px-4 py-3 text-center">3</td>
+                  <td class="px-4 py-3 text-center">15</td>
+                  <td class="px-4 py-3 text-center">38h</td>
+                  <td class="px-4 py-3 text-center">3</td>
+                  <td class="px-4 py-3 text-center">4.4</td>
+                  <td class="px-4 py-3 text-center text-green-600 font-semibold">97.1%</td>
+                </tr>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="px-4 py-3 font-semibold">京都</td>
+                  <td class="px-4 py-3 text-center">8</td>
+                  <td class="px-4 py-3 text-center">22</td>
+                  <td class="px-4 py-3 text-center">68h</td>
+                  <td class="px-4 py-3 text-center">5</td>
+                  <td class="px-4 py-3 text-center">4.3</td>
+                  <td class="px-4 py-3 text-center text-green-600 font-semibold">95.4%</td>
+                </tr>
+                <tr class="border-t hover:bg-gray-50">
+                  <td class="px-4 py-3 font-semibold">大阪</td>
+                  <td class="px-4 py-3 text-center">5</td>
+                  <td class="px-4 py-3 text-center">17</td>
+                  <td class="px-4 py-3 text-center">47h</td>
+                  <td class="px-4 py-3 text-center">3</td>
+                  <td class="px-4 py-3 text-center">4.2</td>
+                  <td class="px-4 py-3 text-center text-green-600 font-semibold">94.7%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- グラフエリア -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <!-- 売止め数推移 -->
+          <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+              <h4 class="text-lg font-bold">売止め数 当月推移</h4>
+            </div>
+            <div class="p-6">
+              <canvas id="uridomeChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 残業時間推移 -->
+          <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+              <h4 class="text-lg font-bold">残業時間 当月推移</h4>
+            </div>
+            <div class="p-6">
+              <canvas id="zangyoChart"></canvas>
+            </div>
+          </div>
+
+          <!-- クレーム数推移 -->
+          <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+              <h4 class="text-lg font-bold">クレーム数 当月推移</h4>
+            </div>
+            <div class="p-6">
+              <canvas id="claimChart"></canvas>
+            </div>
+          </div>
+
+          <!-- 清掃数推移 -->
+          <div class="bg-white rounded-lg shadow">
+            <div class="p-6 border-b">
+              <h4 class="text-lg font-bold">清掃数 当月推移</h4>
+            </div>
+            <div class="p-6">
+              <canvas id="cleaningChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- エリア別比較グラフ -->
+        <div class="bg-white rounded-lg shadow">
+          <div class="p-6 border-b">
+            <h4 class="text-lg font-bold">エリア別 主要指標比較</h4>
+          </div>
+          <div class="p-6">
+            <canvas id="areaComparisonChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- タブ1: 施設別 集計比較 -->
+      <section class="tab-content active" id="tab-daily">
+        <div class="mb-2 border-b-2 border-gray-300">
+          <div class="flex items-center justify-between gap-4">
+            <h3 class="text-lg font-bold flex-shrink-0">
+              施設別 集計比較
+            </h3>
+
+            <!-- フィルター -->
+            <div class="flex flex-wrap gap-2 items-center ">
+            <!-- 施設名 -->
+            <div class="min-w-[80px]">
+              <label class="block text-xs font-medium">施設名</label>
+              <div class="facility-dropdown" id="dailyFacilityDropdown" onclick="toggleFacilityDropdown(event)">
+                <div class="facility-tags" id="dailyFacilityTags">
+                  <span class="text-gray-400 text-sm">施設を選択...（空の場合は全施設を表示）</span>
+                </div>
+                <div class="dropdown-menu" id="dailyFacilityMenu">
+                  <div class="p-2 border-b">
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="all" class="facility-checkbox mr-2" onchange="toggleAllFacilities(this, 'daily')">
+                      <span class="font-semibold">全て選択</span>
+                    </label>
+                  </div>
+                  <!-- 北海道 -->
+                  <div class="dropdown-group" data-area="hokkaido">
+                    <div class="dropdown-group-title flex items-center gap-2">
+                      <input type="checkbox" class="area-checkbox" data-area="hokkaido" onchange="toggleAreaSelection('hokkaido', 'daily')" onclick="event.stopPropagation();">
+                      <span class="cursor-pointer" onclick="document.querySelector('.area-checkbox[data-area=hokkaido]').click()">北海道</span>
+                    </div>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="minn-chitose" class="facility-checkbox mr-2" data-name="Minn 千歳" data-area="hokkaido" onchange="updateFacilityTags('daily'); updateAreaCheckbox('hokkaido')">
+                      <span>Minn 千歳</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="minn-niseko" class="facility-checkbox mr-2" data-name="Minn house Niseko Hirafu" data-area="hokkaido" onchange="updateFacilityTags('daily'); updateAreaCheckbox('hokkaido')">
+                      <span>Minn house Niseko Hirafu</span>
+                    </label>
+                  </div>
+                  <!-- 東京 -->
+                  <div class="dropdown-group" data-area="tokyo">
+                    <div class="dropdown-group-title flex items-center gap-2">
+                      <input type="checkbox" class="area-checkbox" data-area="tokyo" onchange="toggleAreaSelection('tokyo', 'daily')" onclick="event.stopPropagation();">
+                      <span class="cursor-pointer" onclick="document.querySelector('.area-checkbox[data-area=tokyo]').click()">東京</span>
+                    </div>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="minn-haneda" class="facility-checkbox mr-2" data-name="Minn 羽田エアポート" data-area="tokyo" onchange="updateFacilityTags('daily'); updateAreaCheckbox('tokyo')">
+                      <span>Minn 羽田エアポート</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="minn-nihonbashi" class="facility-checkbox mr-2" data-name="Minn 日本橋" data-area="tokyo" onchange="updateFacilityTags('daily'); updateAreaCheckbox('tokyo')">
+                      <span>Minn 日本橋</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="minn-ueno" class="facility-checkbox mr-2" data-name="Minn 上野" data-area="tokyo" onchange="updateFacilityTags('daily'); updateAreaCheckbox('tokyo')">
+                      <span>Minn 上野</span>
+                    </label>
+                  </div>
+                  <!-- 中部 -->
+                  <div class="dropdown-group" data-area="chubu">
+                    <div class="dropdown-group-title flex items-center gap-2">
+                      <input type="checkbox" class="area-checkbox" data-area="chubu"
+                             onchange="toggleAreaSelection('chubu', 'daily')"
+                             onclick="event.stopPropagation();">
+                      <span class="cursor-pointer"
+                            onclick="document.querySelector('.area-checkbox[data-area=chubu]').click()">
+                        中部
+                      </span>
+                    </div>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="startion-nagoya" class="facility-checkbox mr-2" data-name="Startion AI nagoya" data-area="chubu" onchange="updateFacilityTags('daily'); updateAreaCheckbox('chubu')">
+                      <span>Startion AI nagoya</span>
+                    </label>
+                  </div>
+                  <!-- 関西 -->
+                  <div class="dropdown-group" data-area="kansai">
+                    <div class="dropdown-group-title flex items-center gap-2">
+                      <input type="checkbox" class="area-checkbox" data-area="kansai"
+                             onchange="toggleAreaSelection('kansai', 'daily')"
+                             onclick="event.stopPropagation();">
+                      <span class="cursor-pointer"
+                            onclick="document.querySelector('.area-checkbox[data-area=kansai]').click()">
+                        関西
+                      </span>
+                    </div>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="minn-juso" class="facility-checkbox mr-2" data-name="Minn 十三" data-area="kansai" onchange="updateFacilityTags('daily'); updateAreaCheckbox('kansai')">
+                      <span>Minn 十三</span>
+                    </label>
+                    <label class="flex items-center p-2 hover:bg-gray-50 cursor-pointer text-sm" onclick="event.stopPropagation()">
+                      <input type="checkbox" value="minn-umeda" class="facility-checkbox mr-2" data-name="Minn 梅田" data-area="kansai" onchange="updateFacilityTags('daily'); updateAreaCheckbox('kansai')">
+                      <span>Minn 梅田</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 日付単位 -->
+            <div>
+              <label class="block text-xs font-medium mb-1">日付単位</label>
+              <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
+                <button class="date-unit-btn active" data-unit="day" onclick="setDateUnit('day')">日次</button>
+                <button class="date-unit-btn" data-unit="week" onclick="setDateUnit('week')">週次</button>
+                <button class="date-unit-btn" data-unit="month" onclick="setDateUnit('month')">月次</button>
+              </div>
+            </div>
+
+            <!-- 日付の範囲 -->
+            <div id="dateRangeContainer">
+              <label class="block text-xs font-medium mb-1" id="dateLabel">日付</label>
+              <div class="flex gap-2 items-center">
+                <input type="date" id="dateStart" class="border border-gray-300 rounded px-2 py-1 text-xs"
+                       value="2025-11-01">
+                <span id="dateSeparator" class="text-gray-500 text-xs" style="display: none;">〜</span>
+                <input type="date" id="dateEnd" class="border border-gray-300 rounded px-2 py-1 text-xs"
+                       value="2025-11-30" style="display: none;">
+              </div>
+            </div>
+
+            <!-- 表示するボタン -->
+            <div class="ml-auto">
+              <label class="block text-xs font-medium mb-1 opacity-0">.</label>
+              <button class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 font-medium text-xs" onclick="applyFacilityFilter()">
+                表示する
+              </button>
+            </div>
+          </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow table-container">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-1 text-left font-semibold border-r" rowspan="2">施設名</th>
+                <th class="px-4 py-1 text-center font-semibold border-r" colspan="3">売止め数</th>
+                <th class="px-4 py-1 text-center font-semibold border-r" colspan="5">残業</th>
+                <th class="px-4 py-1 text-center font-semibold border-r" colspan="5">クレーム数</th>
+                <th class="px-4 py-1 text-center font-semibold" colspan="5">清掃内製化</th>
+              </tr>
+              <tr class="bg-gray-50 text-xs">
+                <!-- 売止め数 -->
+                <th class="px-2 py-1 text-center border-r border-l">清掃</th>
+                <th class="px-2 py-1 text-center border-r">設備・その他</th>
+                <th class="px-2 py-1 text-center border-r">合計</th>
+                <!-- 残業 -->
+                <th class="px-2 py-1 text-center border-r">早番</th>
+                <th class="px-2 py-1 text-center border-r">中番</th>
+                <th class="px-2 py-1 text-center border-r">遅番</th>
+                <th class="px-2 py-1 text-center border-r">夜番</th>
+                <th class="px-2 py-1 text-center border-r">合計</th>
+                <!-- クレーム数 -->
+                <th class="px-2 py-1 text-center border-r">清掃</th>
+                <th class="px-2 py-1 text-center border-r">清掃以外</th>
+                <th class="px-2 py-1 text-center border-r">合計</th>
+                <th class="px-2 py-1 text-center border-r">レビュー数</th>
+                <th class="px-2 py-1 text-center border-r">パフォーマンス</th>
+                <!-- 清掃内製化 -->
+                <th class="px-2 py-1 text-center border-r">総清掃数(室)</th>
+                <th class="px-2 py-1 text-center border-r">早番(人)</th>
+                <th class="px-2 py-1 text-center border-r">中番(人)</th>
+                <th class="px-2 py-1 text-center border-r">タイミー稼働時間</th>
+                <th class="px-2 py-1 text-center">清掃基準値<br>達成率</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- 北海道エリア -->
+              <tr class="border-t hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-bold border-r" colspan="19">北海道</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50 facility-row" data-facility="minn-chitose">
+                <td class="px-4 py-3 font-semibold border-r">Minn 千歳</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">0</td><td class="px-2 py-3 text-center">42</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">110</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">98%</td></tr>
+              <tr class="border-t hover:bg-gray-50 facility-row" data-facility="minn-niseko">
+                <td class="px-4 py-3 font-semibold border-r">Minn house Niseko Hirafu</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">39</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">105</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">6h</td>
+                <td class="px-2 py-3 text-center">-</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">FAV LUX 札幌すすきの</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">48</td><td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center">115</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">-</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 札幌大通 西18 Station</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">44</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">108</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 北広島 Station East</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">41</td><td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center">100</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">6h</td>
+                <td class="px-2 py-3 text-center">-</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">ES CON FIELD HOKKAIDO HOTEL Kitahiroshima Station</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">0</td><td class="px-2 py-3 text-center">46</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">112</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td></tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">シアテル札幌</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">43</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">107</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">6h</td>
+              </tr>
+
+              <!-- 東京エリア -->
+              <tr class="border-t hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-bold border-r" colspan="19">東京</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 日本橋</td>
+                <td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">5</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">3</td><td class="px-2 py-3 text-center">58</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">145</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">10h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 浅草かっぱ橋</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">55</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">138</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 羽田エアポート</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">52</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">132</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 渋谷神山町</td>
+                <td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">5</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">7</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">3</td><td class="px-2 py-3 text-center">62</td><td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center">155</td><td class="px-2 py-3 text-center">5</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">11h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 蒲田</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">54</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">142</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 上野新御徒町</td>
+                <td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">5</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">60</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">150</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">10h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">シアテル羽田Ⅱ</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">5</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">56</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">144</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 浅草</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">51</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">135</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 上野入谷</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">53</td><td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center">140</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 秋葉原</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">5</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">49</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">128</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 西葛西</td>
+                <td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">3</td><td class="px-2 py-3 text-center">57</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">148</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">10h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 葛西</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">50</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">136</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 日本橋水天宮前</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">47</td><td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center">130</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 浅草蔵前 North</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">54</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">141</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 浅草蔵前 Station</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">45</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">120</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">8h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 上野</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">48</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">133</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+
+              <!-- 中部エリア -->
+              <tr class="border-t hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-bold border-r" colspan="19">中部</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn STATION Ai Nagoya</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">44</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">125</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">カリオ笹塚</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">0</td><td class="px-2 py-3 text-center">40</td><td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center">98</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">5h</td>
+              </tr>
+
+              <!-- 北陸エリア -->
+              <tr class="border-t hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-bold border-r" colspan="19">北陸</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">tower eleven hotel</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">38</td><td class="px-2 py-3 text-center border-r">4.5</td>
+                <td class="px-2 py-3 text-center">95</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">6h</td>
+              </tr>
+
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 金沢</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">0</td><td class="px-2 py-3 text-center">40</td><td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center">102</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">6h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">tower eleven onsen & sauna</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">42</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">105</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+
+              <!-- 京都エリア -->
+              <tr class="border-t hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-bold border-r" colspan="19">京都</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 四条大宮</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">50</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">135</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 河原町五条リバーサイド</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">46</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">122</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 祇園三条</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">0</td><td class="px-2 py-3 text-center">43</td><td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center">118</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">6h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 清水五条</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">47</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">125</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 二条城</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">52</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">138</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 祇園</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">49</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">130</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 烏丸五条</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">0</td><td class="px-2 py-3 text-center">45</td><td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center">120</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">3</td><td class="px-2 py-3 text-center">6h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 祇園鴨川</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">48</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">128</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+
+              <!-- 大阪エリア -->
+              <tr class="border-t hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-bold border-r" colspan="19">大阪</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 十三</td>
+                <td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">5</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">6</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">3</td><td class="px-2 py-3 text-center">52</td><td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center">140</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">10h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 北梅田</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">50</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">135</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 新大阪</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">46</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">125</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 東梅田</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">48</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">130</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 梅田中崎町</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">1</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">0</td><td class="px-2 py-3 text-center">42</td><td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center">110</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">6h</td>
+                <td class="px-2 py-3 text-center">92%</td>
+              </tr>
+
+              <!-- 大阪 -->
+              <tr class="border-t hover:bg-gray-50 bg-blue-50">
+                <td class="px-4 py-3 font-bold border-r" colspan="19">大阪</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 十三</td>
+                <td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">5</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center font-bold border-r">6</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">3</td><td class="px-2 py-3 text-center">52</td><td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center">140</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">10h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">FAV HOTEL Shin-Osaka</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">2</td><td class="px-2 py-3 text-center">50</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">135</td><td class="px-2 py-3 text-center">4</td><td class="px-2 py-3 text-center border-r">2</td><td class="px-2 py-3 text-center">9h</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn なんば道頓堀</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">46</td><td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center">125</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 心斎橋 SHINSAIBASHI</td>
+                <td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">3</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">4</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">48</td><td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center">130</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center">90%</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50">
+                <td class="px-4 py-3 font-semibold border-r">Minn 梅田中崎町</td>
+                <td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center font-bold border-r">2</td>
+                <td class="px-2 py-3 text-center">0</td><td class="px-2 py-3 text-center">1</td><td class="px-2 py-3 text-center font-bold">1</td><td class="px-2 py-3 text-center">44</td><td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center">120</td><td class="px-2 py-3 text-center">3</td><td class="px-2 py-3 text-center">2</td><td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center">95%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      </section>
+      <!-- タブ3: 施設別 週間・月間比較 -->
+      <section class="tab-content" id="tab-monthly">
+        <div class="mb-4">
+          <!-- タイトルと施設選択を横並びに配置 -->
+          <div class="flex items-center justify-between pb-2 border-b-2 border-gray-300 mb-4">
+            <h3 class="text-xl font-bold">
+              施設別 週間・月間比較
+            </h3>
+
+            <!-- 施設選択エリアと期間選択 -->
+            <div class="flex items-center gap-4">
+              <!-- 施設選択 -->
+              <div class="flex items-center gap-2">
+                <label class="font-semibold text-sm whitespace-nowrap">施設選択:</label>
+                <div class="facility-dropdown" id="facilityDropdown" style="min-width: 300px;">
+              <div class="facility-tags" id="facilityTags">
+                <span class="text-gray-500 text-sm" id="placeholder">施設を選択してください</span>
+              </div>
+              <div class="dropdown-menu" id="dropdownMenu">
+                <!-- 北海道 -->
+                <div class="dropdown-group">
+                  <div class="dropdown-group-title" onclick="toggleAreaCollapse('hokkaido')">
+                    <input type="checkbox" id="area-hokkaido" value="hokkaido" data-label="北海道エリア" onchange="toggleAreaFacilities('hokkaido')" onclick="event.stopPropagation()">
+                    <label for="area-hokkaido" onclick="event.stopPropagation()">北海道</label>
+                  </div>
+                  <div class="area-facilities collapsed" id="area-facilities-hokkaido">
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-chitose" value="minn-chitose" data-area="hokkaido" data-label="Minn 千歳" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-chitose">Minn 千歳</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-fav-lux-sapporo" value="fav-lux-sapporo" data-area="hokkaido" data-label="FAV LUX 札幌すすきの" onchange="updateFacilitySelection()">
+                      <label for="facility-fav-lux-sapporo">FAV LUX 札幌すすきの</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-es-con-field" value="es-con-field" data-area="hokkaido" data-label="ES CON FIELD HOKKAIDO HOTEL" onchange="updateFacilitySelection()">
+                      <label for="facility-es-con-field">ES CON FIELD HOKKAIDO HOTEL</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-sapporo-odori" value="minn-sapporo-odori" data-area="hokkaido" data-label="Minn 札幌大通 西18 Station" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-sapporo-odori">Minn 札幌大通 西18 Station</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-kitahiroshima" value="minn-kitahiroshima" data-area="hokkaido" data-label="Minn 北広島 Station East" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-kitahiroshima">Minn 北広島 Station East</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-theater-sapporo" value="theater-sapporo" data-area="hokkaido" data-label="シアテル札幌" onchange="updateFacilitySelection()">
+                      <label for="facility-theater-sapporo">シアテル札幌</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-house-niseko" value="minn-house-niseko" data-area="hokkaido" data-label="Minn house Niseko Hirafu" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-house-niseko">Minn house Niseko Hirafu</label>
+                    </div>
+                  </div>
+                </div>
+                <!-- 東京 -->
+                <div class="dropdown-group">
+                  <div class="dropdown-group-title" onclick="toggleAreaCollapse('tokyo')">
+                    <input type="checkbox" id="area-tokyo" value="tokyo" data-label="東京エリア" onchange="toggleAreaFacilities('tokyo')" onclick="event.stopPropagation()" checked>
+                    <label for="area-tokyo" onclick="event.stopPropagation()">東京</label>
+                  </div>
+                  <div class="area-facilities" id="area-facilities-tokyo">
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-nihonbashi" value="minn-nihonbashi" data-area="tokyo" data-label="Minn 日本橋" onchange="updateFacilitySelection()" checked>
+                      <label for="facility-minn-nihonbashi">Minn 日本橋</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-nihonbashi-suitengumae" value="minn-nihonbashi-suitengumae" data-area="tokyo" data-label="Minn 日本橋水天宮前" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-nihonbashi-suitengumae">Minn 日本橋水天宮前</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-asakusa-kappabashi" value="minn-asakusa-kappabashi" data-area="tokyo" data-label="Minn 浅草かっぱ橋" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-asakusa-kappabashi">Minn 浅草かっぱ橋</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-asakusa" value="minn-asakusa" data-area="tokyo" data-label="Minn 浅草" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-asakusa">Minn 浅草</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-asakusa-kuramae-north" value="minn-asakusa-kuramae-north" data-area="tokyo" data-label="Minn 浅草蔵前 North" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-asakusa-kuramae-north">Minn 浅草蔵前 North</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-asakusa-kuramae-station" value="minn-asakusa-kuramae-station" data-area="tokyo" data-label="Minn 浅草蔵前 Station" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-asakusa-kuramae-station">Minn 浅草蔵前 Station</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-ueno-shinokachimachi" value="minn-ueno-shinokachimachi" data-area="tokyo" data-label="Minn 上野新御徒町" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-ueno-shinokachimachi">Minn 上野新御徒町</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-ueno-iriya" value="minn-ueno-iriya" data-area="tokyo" data-label="Minn 上野入谷" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-ueno-iriya">Minn 上野入谷</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-akihabara" value="minn-akihabara" data-area="tokyo" data-label="Minn 秋葉原" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-akihabara">Minn 秋葉原</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-shibuya" value="minn-shibuya" data-area="tokyo" data-label="Minn 渋谷神山町" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-shibuya">Minn 渋谷神山町</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-cario-sasazuka" value="cario-sasazuka" data-area="tokyo" data-label="カリオ笹塚" onchange="updateFacilitySelection()">
+                      <label for="facility-cario-sasazuka">カリオ笹塚</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-kamata" value="minn-kamata" data-area="tokyo" data-label="Minn 蒲田" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-kamata">Minn 蒲田</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-nishi-kasai" value="minn-nishi-kasai" data-area="tokyo" data-label="Minn 西葛西" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-nishi-kasai">Minn 西葛西</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-kasai" value="minn-kasai" data-area="tokyo" data-label="Minn 葛西" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-kasai">Minn 葛西</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-haneda" value="minn-haneda" data-area="tokyo" data-label="Minn 羽田エアポート" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-haneda">Minn 羽田エアポート</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-theater-haneda2" value="theater-haneda2" data-area="tokyo" data-label="シアテル羽田Ⅱ" onchange="updateFacilitySelection()">
+                      <label for="facility-theater-haneda2">シアテル羽田Ⅱ</label>
+                    </div>
+                  </div>
+                </div>
+                <!-- 愛知 -->
+                <div class="dropdown-group">
+                  <div class="dropdown-group-title" onclick="toggleAreaCollapse('aichi')">
+                    <input type="checkbox" id="area-aichi" value="aichi" data-label="愛知エリア" onchange="toggleAreaFacilities('aichi')" onclick="event.stopPropagation()" checked>
+                    <label for="area-aichi" onclick="event.stopPropagation()">愛知</label>
+                  </div>
+                  <div class="area-facilities" id="area-facilities-aichi">
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-station-ai-nagoya" value="minn-station-ai-nagoya" data-area="aichi" data-label="Minn STATION Ai Nagoya" onchange="updateFacilitySelection()" checked>
+                      <label for="facility-minn-station-ai-nagoya">Minn STATION Ai Nagoya</label>
+                    </div>
+                  </div>
+                </div>
+                <!-- 石川 -->
+                <div class="dropdown-group">
+                  <div class="dropdown-group-title" onclick="toggleAreaCollapse('ishikawa')">
+                    <input type="checkbox" id="area-ishikawa" value="ishikawa" data-label="石川エリア" onchange="toggleAreaFacilities('ishikawa')" onclick="event.stopPropagation()">
+                    <label for="area-ishikawa" onclick="event.stopPropagation()">石川</label>
+                  </div>
+                  <div class="area-facilities collapsed" id="area-facilities-ishikawa">
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-kanazawa" value="minn-kanazawa" data-area="ishikawa" data-label="Minn 金沢" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-kanazawa">Minn 金沢</label>
+                    </div>
+                  </div>
+                </div>
+                <!-- 京都 -->
+                <div class="dropdown-group">
+                  <div class="dropdown-group-title" onclick="toggleAreaCollapse('kyoto')">
+                    <input type="checkbox" id="area-kyoto" value="kyoto" data-label="京都エリア" onchange="toggleAreaFacilities('kyoto')" onclick="event.stopPropagation()">
+                    <label for="area-kyoto" onclick="event.stopPropagation()">京都</label>
+                  </div>
+                  <div class="area-facilities collapsed" id="area-facilities-kyoto">
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-shijoomiya" value="minn-shijoomiya" data-area="kyoto" data-label="Minn 四条大宮" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-shijoomiya">Minn 四条大宮</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-kawaramachi-gojo" value="minn-kawaramachi-gojo" data-area="kyoto" data-label="Minn 河原町五条リバーサイド" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-kawaramachi-gojo">Minn 河原町五条リバーサイド</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-gion-sanjo" value="minn-gion-sanjo" data-area="kyoto" data-label="Minn 祇園三条" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-gion-sanjo">Minn 祇園三条</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-gion" value="minn-gion" data-area="kyoto" data-label="Minn 祇園" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-gion">Minn 祇園</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-gion-kamogawa" value="minn-gion-kamogawa" data-area="kyoto" data-label="Minn 祇園鴨川" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-gion-kamogawa">Minn 祇園鴨川</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-kiyomizu-gojo" value="minn-kiyomizu-gojo" data-area="kyoto" data-label="Minn 清水五条" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-kiyomizu-gojo">Minn 清水五条</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-nijojo" value="minn-nijojo" data-area="kyoto" data-label="Minn 二条城" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-nijojo">Minn 二条城</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-karasuma-gojo" value="minn-karasuma-gojo" data-area="kyoto" data-label="Minn 烏丸五条" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-karasuma-gojo">Minn 烏丸五条</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-tower-eleven-onsen" value="tower-eleven-onsen" data-area="kyoto" data-label="tower eleven onsen & sauna" onchange="updateFacilitySelection()">
+                      <label for="facility-tower-eleven-onsen">tower eleven onsen & sauna</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-tower-eleven-hotel" value="tower-eleven-hotel" data-area="kyoto" data-label="tower eleven hotel" onchange="updateFacilitySelection()">
+                      <label for="facility-tower-eleven-hotel">tower eleven hotel</label>
+                    </div>
+                  </div>
+                </div>
+                <!-- 大阪 -->
+                <div class="dropdown-group">
+                  <div class="dropdown-group-title" onclick="toggleAreaCollapse('osaka')">
+                    <input type="checkbox" id="area-osaka" value="osaka" data-label="大阪エリア" onchange="toggleAreaFacilities('osaka')" onclick="event.stopPropagation()" checked>
+                    <label for="area-osaka" onclick="event.stopPropagation()">大阪</label>
+                  </div>
+                  <div class="area-facilities" id="area-facilities-osaka">
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-juso" value="minn-juso" data-area="osaka" data-label="Minn 十三" onchange="updateFacilitySelection()" checked>
+                      <label for="facility-minn-juso">Minn 十三</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-kita-umeda" value="minn-kita-umeda" data-area="osaka" data-label="Minn 北梅田" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-kita-umeda">Minn 北梅田</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-umeda-nakazakicho" value="minn-umeda-nakazakicho" data-area="osaka" data-label="Minn 梅田中崎町" onchange="updateFacilitySelection()" checked>
+                      <label for="facility-minn-umeda-nakazakicho">Minn 梅田中崎町</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-higashi-umeda" value="minn-higashi-umeda" data-area="osaka" data-label="Minn 東梅田" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-higashi-umeda">Minn 東梅田</label>
+                    </div>
+                    <div class="dropdown-item">
+                      <input type="checkbox" id="facility-minn-shin-osaka" value="minn-shin-osaka" data-area="osaka" data-label="Minn 新大阪" onchange="updateFacilitySelection()">
+                      <label for="facility-minn-shin-osaka">Minn 新大阪</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="dropdown-actions">
+                  <button onclick="selectAllFacilities()" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                    全てを選択
+                  </button>
+                  <button onclick="deselectAllFacilities()" class="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700">
+                    全ての選択を解除
+                  </button>
+                </div>
+              </div>
+              </div>
+              </div>
+
+              <!-- 期間選択（週間・月間） -->
+              <div class="flex items-center gap-2">
+                <label class="font-semibold text-sm whitespace-nowrap">表示期間:</label>
+                <div class="flex border border-gray-300 rounded-lg overflow-hidden">
+                  <button id="btn-weekly" onclick="switchPeriod('weekly')" class="px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors">
+                    週間
+                  </button>
+                  <button id="btn-monthly" onclick="switchPeriod('monthly')" class="px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 transition-colors border-l border-gray-300">
+                    月間
+                  </button>
+                </div>
+              </div>
+
+              <!-- 日付範囲選択 -->
+              <div class="flex items-center gap-2">
+                <label class="font-semibold text-sm whitespace-nowrap">期間指定:</label>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="date"
+                    id="start-date"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onchange="updateDateRange()"
+                  >
+                  <span class="text-gray-600 text-sm">〜</span>
+                  <input
+                    type="date"
+                    id="end-date"
+                    class="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onchange="updateDateRange()"
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
+        <!-- 全施設データ（選択された施設を縦に並べて表示） -->
+        <div id="facility-display-area" class="bg-white rounded-lg shadow table-container">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100">
+              <tr>
+                <th class="px-4 py-3 text-left font-semibold border-r">施設名</th>
+                <th class="px-4 py-3 text-left font-semibold border-r">項目</th>
+                <th class="px-4 py-2 text-center font-semibold border-r">2025/01/06<br/>(月)</th>
+                <th class="px-4 py-2 text-center font-semibold border-r">2025/01/07<br/>(火)</th>
+                <th class="px-4 py-2 text-center font-semibold border-r">2025/01/08<br/>(水)</th>
+                <th class="px-4 py-2 text-center font-semibold border-r">2025/01/09<br/>(木)</th>
+                <th class="px-4 py-2 text-center font-semibold border-r">2025/01/10<br/>(金)</th>
+                <th class="px-4 py-2 text-center font-semibold border-r">2025/01/11<br/>(土)</th>
+                <th class="px-4 py-2 text-center font-semibold border-r">2025/01/12<br/>(日)</th>
+                <th class="px-4 py-2 text-center font-semibold border-r bg-blue-50">週間<br/>合計</th>
+                <th class="px-4 py-2 text-center font-semibold bg-green-50">週間<br/>平均</th>
+              </tr>
+            </thead>
+            <tbody id="table-minn-nihonbashi" data-facility="minn-nihonbashi" data-area="tokyo">
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header facility-first-row" onclick="toggleFacilitySection(this, 'uridome')">
+                <td rowspan="4" class="px-4 py-3 font-bold border-r border-t-4 border-t-blue-600 bg-blue-50 align-top">Minn 日本橋</td>
+                <td class="px-4 py-2 font-bold border-t-4 border-t-blue-600 border-r">
+                  <span>売止め 合計 </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total bg-blue-50">11</td>
+                <td class="px-2 py-2 text-center border-t-4 border-t-blue-600 font-bold section-total bg-green-50">1.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="uridome" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">7</td>
+                <td class="px-2 py-3 text-center bg-green-50">1.0</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="uridome" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">設備・その他</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">4</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.6</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'zangyo')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>残業 合計 </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">4</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">5</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">20</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">2.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">早番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">7</td>
+                <td class="px-2 py-3 text-center bg-green-50">1.0</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">中番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">6</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">遅番</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">3</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.4</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">夜番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">4</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.6</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'claim')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>クレーム 合計 </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">6</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">0.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">5</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.7</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃以外</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">1</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.1</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">レビュー総計</td>
+                <td class="px-2 py-3 text-center border-r">45</td>
+                <td class="px-2 py-3 text-center border-r">42</td>
+                <td class="px-2 py-3 text-center border-r">48</td>
+                <td class="px-2 py-3 text-center border-r">40</td>
+                <td class="px-2 py-3 text-center border-r">50</td>
+                <td class="px-2 py-3 text-center border-r">55</td>
+                <td class="px-2 py-3 text-center border-r">47</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">327</td>
+                <td class="px-2 py-3 text-center bg-green-50">46.7</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">パフォーマンス平均</td>
+                <td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center border-r">3.9</td>
+                <td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">29.1</td>
+                <td class="px-2 py-3 text-center bg-green-50">4.2</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'cleaning')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>清掃内製化 総清掃数(室) </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">120</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">115</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">125</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">110</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">130</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">140</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">125</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">865</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">123.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">総清掃数(室)</td>
+                <td class="px-2 py-3 text-center border-r">120</td>
+                <td class="px-2 py-3 text-center border-r">115</td>
+                <td class="px-2 py-3 text-center border-r">125</td>
+                <td class="px-2 py-3 text-center border-r">110</td>
+                <td class="px-2 py-3 text-center border-r">130</td>
+                <td class="px-2 py-3 text-center border-r">140</td>
+                <td class="px-2 py-3 text-center border-r">125</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">865</td>
+                <td class="px-2 py-3 text-center bg-green-50">123.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">早番(人)</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">4</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">20</td>
+                <td class="px-2 py-3 text-center bg-green-50">2.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">中番(人)</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">14</td>
+                <td class="px-2 py-3 text-center bg-green-50">2.0</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">タイミー稼働時間</td>
+                <td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center border-r">9h</td>
+                <td class="px-2 py-3 text-center border-r">6h</td>
+                <td class="px-2 py-3 text-center border-r">9h</td>
+                <td class="px-2 py-3 text-center border-r">11h</td>
+                <td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">58h</td>
+                <td class="px-2 py-3 text-center bg-green-50">8.3h</td>
+              </tr>
+            </tbody>
+
+            <tbody id="table-startion-ai-nagoya" data-facility="startion-ai-nagoya" data-area="nagoya">
+              <!-- Startion AI nagoya -->
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header facility-first-row" onclick="toggleFacilitySection(this, 'uridome')">
+                <td rowspan="4" class="px-4 py-3 font-bold border-r border-t-4 border-t-blue-600 bg-blue-50 align-top">Startion AI nagoya</td>
+                <td class="px-4 py-2 font-bold border-t-4 border-t-blue-600 border-r">
+                  <span>売止め 合計 </span>
+                  <span class="section-toggle-icon">▼</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total bg-blue-50">11</td>
+                <td class="px-2 py-2 text-center border-t-4 border-t-blue-600 font-bold section-total bg-green-50">1.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="uridome" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">4</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="uridome" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">設備・その他</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">4</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.6</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'zangyo')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>残業 合計 </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">4</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">5</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">20</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">2.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">早番</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">4</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">中番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">6</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">遅番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">4</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">夜番</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">3</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.4</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'claim')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>クレーム 合計 </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">6</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">0.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">5</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.7</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃以外</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">2</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.3</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">レビュー総計</td>
+                <td class="px-2 py-3 text-center border-r">38</td>
+                <td class="px-2 py-3 text-center border-r">35</td>
+                <td class="px-2 py-3 text-center border-r">40</td>
+                <td class="px-2 py-3 text-center border-r">36</td>
+                <td class="px-2 py-3 text-center border-r">42</td>
+                <td class="px-2 py-3 text-center border-r">45</td>
+                <td class="px-2 py-3 text-center border-r">39</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">275</td>
+                <td class="px-2 py-3 text-center bg-green-50">39.3</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">パフォーマンス平均</td>
+                <td class="px-2 py-3 text-center border-r">4.5</td>
+                <td class="px-2 py-3 text-center border-r">4.6</td>
+                <td class="px-2 py-3 text-center border-r">4.4</td>
+                <td class="px-2 py-3 text-center border-r">4.7</td>
+                <td class="px-2 py-3 text-center border-r">4.3</td>
+                <td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center border-r">4.5</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">31.2</td>
+                <td class="px-2 py-3 text-center bg-green-50">4.5</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'cleaning')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>清掃内製化 総清掃数(室) </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">120</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">115</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">125</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">110</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">130</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">140</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">125</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">865</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">123.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">総清掃数(室)</td>
+                <td class="px-2 py-3 text-center border-r">95</td>
+                <td class="px-2 py-3 text-center border-r">90</td>
+                <td class="px-2 py-3 text-center border-r">100</td>
+                <td class="px-2 py-3 text-center border-r">88</td>
+                <td class="px-2 py-3 text-center border-r">105</td>
+                <td class="px-2 py-3 text-center border-r">110</td>
+                <td class="px-2 py-3 text-center border-r">98</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">686</td>
+                <td class="px-2 py-3 text-center bg-green-50">98.0</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">早番(人)</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">17</td>
+                <td class="px-2 py-3 text-center bg-green-50">2.4</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">中番(人)</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">15</td>
+                <td class="px-2 py-3 text-center bg-green-50">2.1</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">タイミー稼働時間</td>
+                <td class="px-2 py-3 text-center border-r">6h</td>
+                <td class="px-2 py-3 text-center border-r">5h</td>
+                <td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center border-r">6h</td>
+                <td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center border-r">9h</td>
+                <td class="px-2 py-3 text-center border-r">7h</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">48h</td>
+                <td class="px-2 py-3 text-center bg-green-50">6.9h</td>
+              </tr>
+            </tbody>
+
+            <tbody id="table-minn-jusan" data-facility="minn-jusan" data-area="osaka">
+              <!-- Minn 十三 -->
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header facility-first-row" onclick="toggleFacilitySection(this, 'uridome')">
+                <td rowspan="4" class="px-4 py-3 font-bold border-r border-t-4 border-t-blue-600 bg-blue-50 align-top">Minn 十三</td>
+                <td class="px-4 py-2 font-bold border-t-4 border-t-blue-600 border-r">
+                  <span>売止め 合計 </span>
+                  <span class="section-toggle-icon">▼</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-4 border-t-blue-600 font-bold section-total bg-blue-50">11</td>
+                <td class="px-2 py-2 text-center border-t-4 border-t-blue-600 font-bold section-total bg-green-50">1.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="uridome" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">6</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="uridome" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">設備・その他</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">7</td>
+                <td class="px-2 py-3 text-center bg-green-50">1.0</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'zangyo')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>残業 合計 </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">4</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">3</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">5</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">20</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">2.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">早番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">3</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.4</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">中番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">5</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.7</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">遅番</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">3</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.4</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="zangyo" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">夜番</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">5</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.7</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'claim')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>クレーム 合計 </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">0</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">2</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">1</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">6</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">0.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">4</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">清掃以外</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">0</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r">1</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">5</td>
+                <td class="px-2 py-3 text-center bg-green-50">0.7</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">レビュー総計</td>
+                <td class="px-2 py-3 text-center border-r">52</td>
+                <td class="px-2 py-3 text-center border-r">49</td>
+                <td class="px-2 py-3 text-center border-r">55</td>
+                <td class="px-2 py-3 text-center border-r">48</td>
+                <td class="px-2 py-3 text-center border-r">58</td>
+                <td class="px-2 py-3 text-center border-r">62</td>
+                <td class="px-2 py-3 text-center border-r">54</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">378</td>
+                <td class="px-2 py-3 text-center bg-green-50">54.0</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="claim" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">パフォーマンス平均</td>
+                <td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center border-r">4.1</td>
+                <td class="px-2 py-3 text-center border-r">3.9</td>
+                <td class="px-2 py-3 text-center border-r">4.2</td>
+                <td class="px-2 py-3 text-center border-r">3.8</td>
+                <td class="px-2 py-3 text-center border-r">3.7</td>
+                <td class="px-2 py-3 text-center border-r">4.0</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">27.7</td>
+                <td class="px-2 py-3 text-center bg-green-50">4.0</td>
+              </tr>
+              <tr class="bg-gray-50 cursor-pointer hover:bg-gray-200 section-header" onclick="toggleFacilitySection(this, 'cleaning')">
+                <td class="px-4 py-2 font-bold border-t-2 border-r">
+                  <span>清掃内製化 総清掃数(室) </span>
+                  <span class="section-toggle-icon">▶</span>
+                </td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">120</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">115</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">125</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">110</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">130</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">140</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total">125</td>
+                <td class="px-2 py-2 text-center border-r border-t-2 font-bold section-total bg-blue-50">865</td>
+                <td class="px-2 py-2 text-center border-t-2 font-bold section-total bg-green-50">123.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">総清掃数(室)</td>
+                <td class="px-2 py-3 text-center border-r">165</td>
+                <td class="px-2 py-3 text-center border-r">160</td>
+                <td class="px-2 py-3 text-center border-r">170</td>
+                <td class="px-2 py-3 text-center border-r">154</td>
+                <td class="px-2 py-3 text-center border-r">177</td>
+                <td class="px-2 py-3 text-center border-r">195</td>
+                <td class="px-2 py-3 text-center border-r">175</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">1196</td>
+                <td class="px-2 py-3 text-center bg-green-50">170.9</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">早番(人)</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">4</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">4</td>
+                <td class="px-2 py-3 text-center border-r">4</td>
+                <td class="px-2 py-3 text-center border-r">4</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">24</td>
+                <td class="px-2 py-3 text-center bg-green-50">3.4</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">中番(人)</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">2</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r">3</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">18</td>
+                <td class="px-2 py-3 text-center bg-green-50">2.6</td>
+              </tr>
+              <tr class="border-t hover:bg-gray-50" data-section="cleaning" style="display: none;">
+                <td class="px-4 py-3 pl-8 border-r">タイミー稼働時間</td>
+                <td class="px-2 py-3 text-center border-r">10h</td>
+                <td class="px-2 py-3 text-center border-r">10h</td>
+                <td class="px-2 py-3 text-center border-r">10h</td>
+                <td class="px-2 py-3 text-center border-r">8h</td>
+                <td class="px-2 py-3 text-center border-r">11h</td>
+                <td class="px-2 py-3 text-center border-r">12h</td>
+                <td class="px-2 py-3 text-center border-r">10h</td>
+                <td class="px-2 py-3 text-center border-r bg-blue-50">71h</td>
+                <td class="px-2 py-3 text-center bg-green-50">10.1h</td>
+              </tr>
+            </tbody>
+
+
+          </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // タブ切り替え
+    function switchTab(tabName) {
+      // 全てのタブボタンとコンテンツからactiveクラスを削除
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // クリックされたタブボタンとコンテンツにactiveクラスを追加
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+
+      // タイトルを変更
+      const titleElement = document.querySelector('main h2');
+      const titles = {
+        'dashboard': '全施設： ダッシュボード',
+        'monthly': '全施設： 施設別 週間・月間比較'
+      };
+      titleElement.textContent = titles[tabName] || '全施設： ダッシュボード';
+    }
+
+    // 施設ドロップダウンの開閉
+    function toggleFacilityDropdown(event) {
+      const dropdown = event.currentTarget;
+      const menu = dropdown.querySelector('.dropdown-menu');
+      menu.classList.toggle('active');
+      event.stopPropagation();
+    }
+
+    // ドロップダウン外をクリックで閉じる
+    document.addEventListener('click', function(event) {
+      const menus = document.querySelectorAll('.dropdown-menu');
+      menus.forEach(menu => {
+        if (!menu.closest('.facility-dropdown').contains(event.target)) {
+          menu.classList.remove('active');
+        }
+      });
+    });
+
+    // 施設タグの更新
+    function updateFacilityTags(context) {
+      const tagsContainer = document.getElementById(context + 'FacilityTags');
+      const checkboxes = document.querySelectorAll(`#${context}FacilityMenu .facility-checkbox`);
+
+      // 選択された施設を取得（"all"を除外）
+      const selected = Array.from(checkboxes).filter(cb => cb.checked && cb.value !== 'all');
+
+      // タグコンテナをクリア
+      tagsContainer.innerHTML = '';
+
+      if (selected.length === 0) {
+        // 何も選択されていない場合
+        tagsContainer.innerHTML = '<span class="text-gray-400 text-sm">施設を選択...（空の場合は全施設を表示）</span>';
+      } else {
+        // 選択された施設をタグとして表示
+        selected.forEach(checkbox => {
+          const tag = document.createElement('div');
+          tag.className = 'facility-tag';
+          tag.innerHTML = `
+            <span>${checkbox.dataset.name}</span>
+            <button onclick="removeFacilityTag('${checkbox.value}', '${context}'); event.stopPropagation();">×</button>
+          `;
+          tagsContainer.appendChild(tag);
+        });
+      }
+    }
+
+    // 施設タグの削除
+    function removeFacilityTag(value, context) {
+      const checkbox = document.querySelector(`#${context}FacilityMenu input[value="${value}"]`);
+      if (checkbox) {
+        checkbox.checked = false;
+        updateFacilityTags(context);
+      }
+    }
+
+    // 全選択/解除
+    function toggleAllFacilities(allCheckbox, context) {
+      const checkboxes = document.querySelectorAll(`#${context}FacilityMenu .facility-checkbox`);
+      checkboxes.forEach(cb => {
+        if (cb.value !== 'all') {
+          cb.checked = allCheckbox.checked;
+        }
+      });
+      updateFacilityTags(context);
+    }
+
+    // エリア単位で選択/解除
+    function toggleAreaSelection(area, context) {
+      const areaCheckbox = document.querySelector(`.area-checkbox[data-area="${area}"]`);
+      const facilityCheckboxes = document.querySelectorAll(`#${context}FacilityMenu .facility-checkbox[data-area="${area}"]`);
+
+      // onchangeイベントで呼ばれるため、既にチェック状態は変更済み
+      // そのエリアの全施設を同じ状態にする
+      facilityCheckboxes.forEach(cb => {
+        cb.checked = areaCheckbox.checked;
+      });
+
+      updateFacilityTags(context);
+    }
+
+    // エリアチェックボックスの状態を更新（施設の選択状態に応じて）
+    function updateAreaCheckbox(area) {
+      const areaCheckbox = document.querySelector(`.area-checkbox[data-area="${area}"]`);
+      const facilityCheckboxes = document.querySelectorAll(`.facility-checkbox[data-area="${area}"]`);
+
+      if (!areaCheckbox || facilityCheckboxes.length === 0) return;
+
+      // そのエリアの全施設がチェックされているかチェック
+      const allChecked = Array.from(facilityCheckboxes).every(cb => cb.checked);
+      const someChecked = Array.from(facilityCheckboxes).some(cb => cb.checked);
+
+      areaCheckbox.checked = allChecked;
+      // 一部だけ選択されている場合は、indeterminate状態にする
+      areaCheckbox.indeterminate = someChecked && !allChecked;
+    }
+
+    // 日付単位の切り替え
+    function setDateUnit(unit) {
+      // 全てのボタンからactiveクラスを削除
+      document.querySelectorAll('.date-unit-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      // クリックされたボタンにactiveクラスを追加
+      event.target.classList.add('active');
+
+      // 日付フィールドとラベルを取得
+      const dateLabel = document.getElementById('dateLabel');
+      const dateStart = document.getElementById('dateStart');
+      const dateEnd = document.getElementById('dateEnd');
+      const dateSeparator = document.getElementById('dateSeparator');
+
+      // 日付単位によって入力フィールドを変更
+      if (unit === 'day') {
+        // 日次：単一日付選択
+        dateLabel.textContent = '日付';
+        dateEnd.style.display = 'none';
+        dateSeparator.style.display = 'none';
+      } else if (unit === 'week') {
+        // 週次：日付範囲選択
+        dateLabel.textContent = '週の範囲';
+        dateEnd.style.display = 'block';
+        dateSeparator.style.display = 'block';
+        // デフォルトで1週間
+        const start = new Date(dateStart.value);
+        const end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        dateEnd.value = end.toISOString().split('T')[0];
+      } else if (unit === 'month') {
+        // 月次：日付範囲選択
+        dateLabel.textContent = '月の範囲';
+        dateEnd.style.display = 'block';
+        dateSeparator.style.display = 'block';
+        // デフォルトで1ヶ月
+        const start = new Date(dateStart.value);
+        const end = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+        dateEnd.value = end.toISOString().split('T')[0];
+      }
+
+      console.log('Selected unit:', unit);
+    }
+
+    // 施設フィルターの適用
+    function applyFacilityFilter() {
+      // 選択された施設を取得
+      const checkboxes = document.querySelectorAll('#dailyFacilityMenu .facility-checkbox');
+      const selectedFacilities = Array.from(checkboxes)
+        .filter(cb => cb.checked && cb.value !== 'all')
+        .map(cb => cb.dataset.name);
+
+      // テーブルの全ての施設行を取得
+      const table = document.querySelector('#tab-daily table tbody');
+      const allRows = table.querySelectorAll('tr');
+
+      // 各行をチェック
+      allRows.forEach(row => {
+        const firstCell = row.querySelector('td');
+        if (!firstCell) return;
+
+        const facilityName = firstCell.textContent.trim();
+        const isAreaRow = firstCell.classList.contains('font-bold') && firstCell.colSpan > 1;
+
+        if (isAreaRow) {
+          // エリア行は常に表示
+          row.style.display = '';
+        } else if (selectedFacilities.length === 0) {
+          // 何も選択されていない場合は全て表示
+          row.style.display = '';
+        } else {
+          // 選択された施設のみ表示
+          const shouldShow = selectedFacilities.some(selected => facilityName.includes(selected));
+          row.style.display = shouldShow ? '' : 'none';
+        }
+      });
+
+      console.log('Filter applied. Selected facilities:', selectedFacilities);
+    }
+
+    // 施設別セクションの折りたたみ/展開
+    function toggleFacilitySection(headerRow, sectionName) {
+      const icon = headerRow.querySelector('.section-toggle-icon');
+      const isCollapsed = icon.textContent === '▶';
+
+      // アイコンを切り替え
+      icon.textContent = isCollapsed ? '▼' : '▶';
+
+      // この施設のtbodyを取得
+      const tbody = headerRow.closest('tbody');
+      if (!tbody) return;
+
+      // このtbody内の施設名セル(rowspanを持つセル)を取得
+      const facilityCell = tbody.querySelector('td[rowspan]');
+      if (!facilityCell) return;
+
+      // このtbody内のdata-section="${sectionName}"の行を取得
+      const sectionRows = tbody.querySelectorAll(`tr[data-section="${sectionName}"]`);
+      if (sectionRows.length === 0) return;
+
+      const currentRowspan = parseInt(facilityCell.getAttribute('rowspan'));
+      const childRowsCount = sectionRows.length;
+
+      sectionRows.forEach(row => {
+        if (isCollapsed) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      // rowspanを調整
+      if (isCollapsed) {
+        // 展開時: rowspanを増やす
+        facilityCell.setAttribute('rowspan', currentRowspan + childRowsCount);
+      } else {
+        // 折りたたみ時: rowspanを減らす
+        facilityCell.setAttribute('rowspan', currentRowspan - childRowsCount);
+      }
+    }
+
+    // グラフ初期化
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeCharts();
+    });
+
+    function initializeCharts() {
+      // 当月の日付ラベル（1日〜今日まで）
+      const days = Array.from({length: 15}, (_, i) => `${i + 1}日`);
+
+      // 売止め数推移グラフ
+      const uridomeCtx = document.getElementById('uridomeChart');
+      if (uridomeCtx) {
+        new Chart(uridomeCtx, {
+          type: 'line',
+          data: {
+            labels: days,
+            datasets: [{
+              label: '清掃',
+              data: [3, 2, 4, 3, 5, 2, 4, 3, 2, 4, 5, 3, 4, 2, 3],
+              borderColor: 'rgb(59, 130, 246)',
+              backgroundColor: 'rgba(59, 130, 246, 0.1)',
+              tension: 0.3
+            }, {
+              label: '設備・その他',
+              data: [1, 2, 1, 2, 1, 3, 2, 1, 2, 1, 2, 1, 2, 1, 2],
+              borderColor: 'rgb(239, 68, 68)',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              title: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      }
+
+      // 残業時間推移グラフ
+      const zangyoCtx = document.getElementById('zangyoChart');
+      if (zangyoCtx) {
+        new Chart(zangyoCtx, {
+          type: 'bar',
+          data: {
+            labels: days,
+            datasets: [{
+              label: '残業時間',
+              data: [18, 22, 25, 20, 28, 24, 26, 23, 21, 27, 29, 24, 26, 22, 25],
+              backgroundColor: 'rgba(249, 115, 22, 0.7)',
+              borderColor: 'rgb(249, 115, 22)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              title: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: '時間' } }
+            }
+          }
+        });
+      }
+
+      // クレーム数推移グラフ
+      const claimCtx = document.getElementById('claimChart');
+      if (claimCtx) {
+        new Chart(claimCtx, {
+          type: 'line',
+          data: {
+            labels: days,
+            datasets: [{
+              label: '清掃',
+              data: [1, 0, 2, 1, 1, 0, 1, 2, 1, 0, 1, 1, 0, 1, 2],
+              borderColor: 'rgb(239, 68, 68)',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              tension: 0.3
+            }, {
+              label: '清掃以外',
+              data: [0, 1, 0, 1, 1, 1, 0, 1, 0, 1, 1, 0, 1, 0, 1],
+              borderColor: 'rgb(234, 179, 8)',
+              backgroundColor: 'rgba(234, 179, 8, 0.1)',
+              tension: 0.3
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              title: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true, ticks: { stepSize: 1 } }
+            }
+          }
+        });
+      }
+
+      // 清掃数推移グラフ
+      const cleaningCtx = document.getElementById('cleaningChart');
+      if (cleaningCtx) {
+        new Chart(cleaningCtx, {
+          type: 'bar',
+          data: {
+            labels: days,
+            datasets: [{
+              label: '清掃数',
+              data: [120, 135, 128, 142, 138, 125, 130, 145, 140, 132, 138, 142, 136, 129, 134],
+              backgroundColor: 'rgba(34, 197, 94, 0.7)',
+              borderColor: 'rgb(34, 197, 94)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              title: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true, title: { display: true, text: '室数' } }
+            }
+          }
+        });
+      }
+
+      // エリア別比較グラフ
+      const areaCtx = document.getElementById('areaComparisonChart');
+      if (areaCtx) {
+        new Chart(areaCtx, {
+          type: 'bar',
+          data: {
+            labels: ['北海道', '東京', '中部', '北陸', '京都', '大阪'],
+            datasets: [{
+              label: '売止め数',
+              data: [28, 52, 8, 15, 22, 17],
+              backgroundColor: 'rgba(59, 130, 246, 0.7)',
+              borderColor: 'rgb(59, 130, 246)',
+              borderWidth: 1
+            }, {
+              label: 'クレーム数',
+              data: [5, 10, 2, 3, 5, 3],
+              backgroundColor: 'rgba(239, 68, 68, 0.7)',
+              borderColor: 'rgb(239, 68, 68)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { position: 'top' },
+              title: { display: false }
+            },
+            scales: {
+              y: { beginAtZero: true }
+            }
+          }
+        });
+      }
+    }
+
+    // ドロップダウン開閉
+    document.addEventListener('DOMContentLoaded', function() {
+      const dropdown = document.getElementById('facilityDropdown');
+      const menu = document.getElementById('dropdownMenu');
+
+      dropdown.addEventListener('click', function(e) {
+        // タグの削除ボタンやドロップダウンメニューの中身はトグルしない
+        if (e.target.closest('.facility-tag button') || e.target.closest('.dropdown-menu')) {
+          return;
+        }
+        menu.classList.toggle('active');
+      });
+
+      // ドロップダウンメニュー内のクリックイベントを停止
+      menu.addEventListener('click', function(e) {
+        e.stopPropagation();
+      });
+
+      // ドロップダウン外をクリックしたら閉じる
+      document.addEventListener('click', function(e) {
+        if (!dropdown.contains(e.target)) {
+          menu.classList.remove('active');
+        }
+      });
+
+      // 初期状態のタグを表示
+      updateFacilitySelection();
+    });
+
+    // 施設選択を更新する関数
+    function updateFacilitySelection() {
+      const tagsContainer = document.getElementById('facilityTags');
+      const checkboxes = document.querySelectorAll('[id^="facility-"]');
+
+      // 選択された施設を取得
+      const selectedFacilities = [];
+      checkboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedFacilities.push({
+            value: checkbox.value,
+            label: checkbox.dataset.label,
+            area: checkbox.dataset.area
+          });
+        }
+      });
+
+      // タグを更新
+      tagsContainer.innerHTML = '';
+
+      if (selectedFacilities.length === 0) {
+        // プレースホルダーを表示
+        const placeholder = document.createElement('span');
+        placeholder.className = 'text-gray-500 text-sm';
+        placeholder.id = 'placeholder';
+        placeholder.textContent = '施設を選択してください';
+        tagsContainer.appendChild(placeholder);
+      } else {
+        selectedFacilities.forEach(facility => {
+          const tag = document.createElement('span');
+          tag.className = 'facility-tag';
+          tag.innerHTML = `
+            ${facility.label}
+            <button onclick="removeFacility('${facility.value}')">&times;</button>
+          `;
+          tagsContainer.appendChild(tag);
+        });
+      }
+
+      // テーブル表示を更新
+      updateFacilityDisplay();
+    }
+
+    // タグから施設を削除
+    function removeFacility(facilityValue) {
+      const checkbox = document.getElementById('facility-' + facilityValue.replace('facility-', ''));
+      if (checkbox) {
+        checkbox.checked = false;
+        updateFacilitySelection();
+      }
+    }
+
+    // 施設表示を更新する関数
+    function updateFacilityDisplay() {
+      // 選択された施設を取得
+      const selectedFacilities = [];
+      document.querySelectorAll('[id^="facility-"]').forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedFacilities.push(checkbox.value);
+        }
+      });
+
+      // 全ての施設テーブルを取得
+      const allTables = document.querySelectorAll('.facility-table');
+
+      // 各テーブルの表示/非表示を制御
+      allTables.forEach(table => {
+        const facilityValue = table.dataset.facility;
+
+        if (selectedFacilities.includes(facilityValue)) {
+          table.classList.remove('hidden');
+        } else {
+          table.classList.add('hidden');
+        }
+      });
+    }
+
+    // 期間切り替え（週間・月間）
+    function switchPeriod(period) {
+      const weeklyBtn = document.getElementById('btn-weekly');
+      const monthlyBtn = document.getElementById('btn-monthly');
+      const startDateInput = document.getElementById('start-date');
+      const endDateInput = document.getElementById('end-date');
+
+      if (period === 'weekly') {
+        weeklyBtn.className = 'px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors';
+        monthlyBtn.className = 'px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 transition-colors border-l border-gray-300';
+
+        // 週間の場合：今日から7日前
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+
+        startDateInput.value = formatDate(weekAgo);
+        endDateInput.value = formatDate(today);
+      } else {
+        weeklyBtn.className = 'px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-100 transition-colors';
+        monthlyBtn.className = 'px-4 py-2 text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors border-l border-gray-300';
+
+        // 月間の場合：今月の1日から今日まで
+        const today = new Date();
+        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        startDateInput.value = formatDate(firstDayOfMonth);
+        endDateInput.value = formatDate(today);
+      }
+
+      // データの表示を週間/月間に切り替える処理
+      console.log('Period switched to:', period);
+      updateDateRange();
+    }
+
+    // 日付範囲更新
+    function updateDateRange() {
+      const startDate = document.getElementById('start-date').value;
+      const endDate = document.getElementById('end-date').value;
+
+      if (startDate && endDate) {
+        console.log('Date range updated:', startDate, '〜', endDate);
+
+        // バリデーション：開始日が終了日より後の場合はエラー
+        if (new Date(startDate) > new Date(endDate)) {
+          alert('開始日は終了日より前の日付を選択してください');
+          return;
+        }
+
+        // TODO: ここで選択された日付範囲に基づいてデータを取得・表示する処理を実装
+        console.log('Fetching data for date range:', startDate, 'to', endDate);
+      }
+    }
+
+    // 日付をYYYY-MM-DD形式にフォーマット
+    function formatDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // エリアの施設リストを折りたたむ/展開する
+    function toggleAreaCollapse(area) {
+      console.log('toggleAreaCollapse called with area:', area);
+      const facilitiesContainer = document.getElementById('area-facilities-' + area);
+      console.log('facilitiesContainer:', facilitiesContainer);
+      if (facilitiesContainer) {
+        facilitiesContainer.classList.toggle('collapsed');
+        console.log('Toggled collapsed class. Current classes:', facilitiesContainer.className);
+      } else {
+        console.error('Area facilities container not found:', 'area-facilities-' + area);
+      }
+    }
+
+    // エリア単位で施設を選択/解除
+    function toggleAreaFacilities(area) {
+      const areaCheckbox = document.getElementById('area-' + area);
+      const isChecked = areaCheckbox.checked;
+
+      // そのエリアの全施設のチェックボックスを更新
+      document.querySelectorAll(`[id^="facility-"][data-area="${area}"]`).forEach(checkbox => {
+        checkbox.checked = isChecked;
+      });
+
+      updateFacilitySelection();
+    }
+
+    // 全て選択
+    function selectAllFacilities() {
+      // 全エリアを選択
+      document.querySelectorAll('[id^="area-"]').forEach(checkbox => {
+        checkbox.checked = true;
+      });
+      // 全施設を選択
+      document.querySelectorAll('[id^="facility-"]').forEach(checkbox => {
+        checkbox.checked = true;
+      });
+      updateFacilitySelection();
+    }
+
+    // 全て解除
+    function deselectAllFacilities() {
+      // 全エリアを解除
+      document.querySelectorAll('[id^="area-"]').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      // 全施設を解除
+      document.querySelectorAll('[id^="facility-"]').forEach(checkbox => {
+        checkbox.checked = false;
+      });
+      updateFacilitySelection();
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const icon = document.getElementById('sidebarIcon');
+      sidebar.classList.toggle('closed');
+
+      // アイコンの向きを変更
+      if (sidebar.classList.contains('closed')) {
+        icon.style.transform = 'rotate(180deg)';
+      } else {
+        icon.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    function toggleFourZero() {
+      const content = document.getElementById('fourZeroContent');
+      const icon = document.getElementById('fourZeroIcon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+
+    function toggleAllFacilities() {
+      const content = document.getElementById('allFacilitiesContent');
+      const icon = document.getElementById('allFacilitiesIcon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+
+    function toggleArea() {
+      const content = document.getElementById('areaContent');
+      const icon = document.getElementById('areaIcon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+
+    function toggleSidebarArea(area) {
+      const content = document.getElementById(area + 'Content');
+      const icon = document.getElementById(area + 'Icon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4ZERO-APP - 管理者設定</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    }
+    /* Sidebar styles */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 64px;
+      width: 256px;
+      height: calc(100vh - 64px);
+      background: #e8e8e8;
+      overflow-y: auto;
+      z-index: 40;
+      transition: transform 0.3s ease;
+    }
+    .sidebar.collapsed {
+      transform: translateX(-192px);
+    }
+    .content-wrapper {
+      margin-left: 256px;
+      margin-top: 64px;
+      transition: margin-left 0.3s ease;
+    }
+    .sidebar.collapsed ~ .content-wrapper {
+      margin-left: 64px;
+    }
+    .main-content {
+      min-height: calc(100vh - 64px);
+    }
+    /* タブスタイル */
+    .tab-container {
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 2rem;
+    }
+    .tab-list {
+      display: flex;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      flex-wrap: wrap;
+    }
+    .tab-button {
+      padding: 0.75rem 1.5rem;
+      background: #f3f4f6;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .tab-button:hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .tab-button.active {
+      background: white;
+      color: #2e4265;
+      border-bottom-color: #2e4265;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* テーブルスタイル */
+    .settings-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .settings-table th,
+    .settings-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .settings-table th {
+      background: #f9fafb;
+      font-weight: 600;
+      color: #374151;
+    }
+    .settings-table tr:hover {
+      background: #f9fafb;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <!-- ヘッダー -->
+  <header class="bg-[#2e4265] text-white px-6 py-4 flex items-center justify-between h-16 fixed top-0 left-0 right-0 z-50">
+    <div class="flex items-center gap-4">
+      <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-[#3d5278] rounded">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <h1 class="text-2xl font-bold">4ZERO-APP 管理者設定</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right">
+        <div class="text-sm">管理者</div>
+        <div class="text-xs text-gray-300">admin@squeeze.co.jp</div>
+      </div>
+      <button onclick="location.href='dashboard.html'" class="bg-white text-[#2e4265] px-4 py-2 rounded hover:bg-gray-100">
+        ダッシュボードに戻る
+      </button>
+    </div>
+  </header>
+
+  <!-- サイドバー -->
+  <aside id="sidebar" class="sidebar">
+    <nav class="p-4">
+      <div class="mb-2">
+        <a href="dashboard.html" class="flex items-center gap-3 p-3 hover:bg-gray-300 rounded">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          <span>ダッシュボードに戻る</span>
+        </a>
+      </div>
+      <div class="mt-6 mb-2">
+        <div class="px-3 py-2 text-xs font-semibold text-gray-600 uppercase">設定項目</div>
+        <a href="#" onclick="switchTab('roles'); return false;" class="block p-3 hover:bg-gray-300 rounded">
+          権限登録
+        </a>
+        <a href="#" onclick="switchTab('area'); return false;" class="block p-3 hover:bg-gray-300 rounded">
+          施設別エリア設定
+        </a>
+        <a href="#" onclick="switchTab('cleaning'); return false;" class="block p-3 hover:bg-gray-300 rounded">
+          清掃基準値設定
+        </a>
+        <a href="#" onclick="switchTab('complaint'); return false;" class="block p-3 hover:bg-gray-300 rounded">
+          クレーム種別設定
+        </a>
+        <a href="#" onclick="switchTab('building-map'); return false;" class="block p-3 hover:bg-gray-300 rounded">
+          施設名マッピング
+        </a>
+        <a href="#" onclick="switchTab('notification'); return false;" class="block p-3 hover:bg-gray-300 rounded">
+          通知先設定
+        </a>
+      </div>
+    </nav>
+  </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="content-wrapper">
+    <main class="main-content p-6">
+
+      <!-- タブナビゲーション -->
+      <div class="tab-container">
+        <div class="tab-list">
+          <button class="tab-button active" onclick="switchTab('roles')">権限登録</button>
+          <button class="tab-button" onclick="switchTab('area')">施設別エリア設定</button>
+          <button class="tab-button" onclick="switchTab('cleaning')">清掃基準値設定</button>
+          <button class="tab-button" onclick="switchTab('complaint')">クレーム種別設定</button>
+          <button class="tab-button" onclick="switchTab('building-map')">施設名マッピング</button>
+          <button class="tab-button" onclick="switchTab('notification')">通知先設定</button>
+        </div>
+      </div>
+
+      <!-- タブコンテンツ: 権限登録 -->
+      <section class="tab-content active" id="tab-roles">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold">権限登録（マネジャー/VL）</h2>
+            <button onclick="openAddRoleModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-medium">
+              + 新規追加
+            </button>
+          </div>
+
+          <!-- テーブル: ROLE -->
+          <div class="overflow-x-auto">
+            <table class="settings-table">
+              <thead>
+                <tr>
+                  <th>名前</th>
+                  <th>メールアドレス</th>
+                  <th>Slack User ID</th>
+                  <th>権限</th>
+                  <th>スコープ</th>
+                  <th>有効/無効</th>
+                  <th>登録日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>田中太郎</td>
+                  <td>manager@squeeze.co.jp</td>
+                  <td>
+                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">U01234*****</code>
+                  </td>
+                  <td><span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">MANAGER</span></td>
+                  <td>GLOBAL</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-01</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>佐藤花子</td>
+                  <td>sato@squeeze.co.jp</td>
+                  <td>
+                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">U56789*****</code>
+                  </td>
+                  <td><span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-medium">MANAGER</span></td>
+                  <td>AREA</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-02</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>山田一郎</td>
+                  <td>vl1@squeeze.co.jp</td>
+                  <td>
+                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">U11111*****</code>
+                  </td>
+                  <td><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">VL</span></td>
+                  <td>BUILDING</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-05</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>鈴木次郎</td>
+                  <td>vl2@squeeze.co.jp</td>
+                  <td>
+                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">U22222*****</code>
+                  </td>
+                  <td><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">VL</span></td>
+                  <td>BUILDING</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-05</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>高橋三郎</td>
+                  <td>vl3@squeeze.co.jp</td>
+                  <td>
+                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">U33333*****</code>
+                  </td>
+                  <td><span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-medium">VL</span></td>
+                  <td>BUILDING</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-06</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">無効化</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4 text-sm text-gray-600 bg-gray-50 p-4 rounded">
+            <p><strong>説明:</strong></p>
+            <ul class="list-disc ml-5 mt-2 space-y-1">
+              <li>名前: ユーザーの氏名</li>
+              <li>メールアドレス: ログインに使用するメールアドレス</li>
+              <li>Slack User ID: Slack通知でメンションを送るために必要なID（U12345...形式）</li>
+              <li>権限: MANAGER（マネジャー）またはVL（現場責任者）</li>
+              <li>スコープ: GLOBAL（全体）、AREA（エリア単位）、BUILDING（施設単位）</li>
+            </ul>
+            <p class="mt-2"><strong>注意:</strong> 最後のマネジャーは削除できません。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- タブコンテンツ: 施設名マッピング -->
+      <section class="tab-content" id="tab-building-map">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold">施設名マッピング設定</h2>
+            <button onclick="openAddMappingModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-medium">
+              + 新規追加
+            </button>
+          </div>
+
+          <!-- テーブル: BUILDING_NAME_MAP -->
+          <div class="overflow-x-auto">
+            <table class="settings-table">
+              <thead>
+                <tr>
+                  <th>サイト</th>
+                  <th>外部施設名（エイリアス）</th>
+                  <th>マッピング先施設</th>
+                  <th>更新日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>TrustYou</td>
+                  <td>Minn Nihonbashi</td>
+                  <td>Minn 日本橋</td>
+                  <td>2024-11-10</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">削除</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>TrustYou</td>
+                  <td>Minn日本橋</td>
+                  <td>Minn 日本橋</td>
+                  <td>2024-11-10</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">削除</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>TrustYou</td>
+                  <td>Minn Shibuya</td>
+                  <td>Minn 渋谷</td>
+                  <td>2024-11-10</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-red-600 hover:text-red-800">削除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4 text-sm text-gray-600">
+            <p><strong>説明:</strong> TrustYouなどの外部サービスから取得した施設名の表記ゆれを、内部の施設IDにマッピングします。これにより、アプリDBへ外部データを取り込む際に施設名で照合することができます。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- タブコンテンツ: 施設別エリア設定 -->
+      <section class="tab-content" id="tab-area">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold">施設別エリア設定</h2>
+            <div class="flex gap-2">
+              <select id="areaFilterSelect" class="border border-gray-300 rounded px-3 py-2 text-sm" onchange="filterByArea()">
+                <option value="all">全エリア</option>
+                <option value="hokkaido">北海道エリア</option>
+                <option value="tokyo">東京エリア</option>
+                <option value="aichi">愛知エリア</option>
+                <option value="kyoto">京都エリア</option>
+                <option value="osaka">大阪エリア</option>
+              </select>
+              <button onclick="openAddFacilityModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-medium">
+                + 施設追加
+              </button>
+            </div>
+          </div>
+
+          <!-- 全体統括 -->
+          <div class="bg-gradient-to-r from-purple-50 to-purple-100 border-2 border-purple-300 rounded-lg p-6 mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-purple-900 flex items-center gap-2">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                全体統括（GLOBAL）
+              </h3>
+              <button onclick="openAddGlobalManagerModal()" class="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 text-sm font-medium">
+                + 統括追加
+              </button>
+            </div>
+            <div class="flex flex-wrap gap-3">
+              <div class="bg-white px-4 py-2 rounded-lg border border-purple-200 flex items-center gap-2">
+                <span class="font-semibold text-purple-900">田中太郎</span>
+                <span class="text-xs text-gray-600">(manager@squeeze.co.jp)</span>
+                <button class="text-red-500 hover:text-red-700 ml-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div class="bg-white px-4 py-2 rounded-lg border border-purple-200 flex items-center gap-2">
+                <span class="font-semibold text-purple-900">佐藤花子</span>
+                <span class="text-xs text-gray-600">(sato@squeeze.co.jp)</span>
+                <button class="text-red-500 hover:text-red-700 ml-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- エリアごとのセクション -->
+          <div class="space-y-8">
+
+            <!-- 東京エリア -->
+            <div class="border-2 border-gray-200 rounded-lg p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-blue-700">東京エリア</h3>
+                <button onclick="openAddAreaManagerModal('tokyo')" class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm font-medium">
+                  + マネジャー追加
+                </button>
+              </div>
+
+              <!-- マネジャーごとのセクション -->
+              <div class="space-y-4">
+                <!-- マネジャー1 -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">マネジャー</span>
+                      <span class="font-semibold text-blue-900">田中太郎</span>
+                      <span class="text-xs text-gray-600">(manager@squeeze.co.jp)</span>
+                    </div>
+                    <button class="text-red-500 hover:text-red-700">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="ml-4">
+                    <div class="text-sm text-gray-700 mb-2">担当店舗:</div>
+                    <div class="flex flex-wrap gap-2">
+                      <div class="bg-white px-3 py-2 rounded border border-blue-200 flex items-center gap-2">
+                        <span class="text-sm font-medium">Minn 日本橋</span>
+                        <button class="text-red-500 hover:text-red-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button class="bg-white px-3 py-2 rounded border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 text-sm font-medium">
+                        + 店舗追加
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- マネジャー2 -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="bg-blue-600 text-white px-3 py-1 rounded text-sm font-medium">マネジャー</span>
+                      <span class="font-semibold text-blue-900">佐藤花子</span>
+                      <span class="text-xs text-gray-600">(sato@squeeze.co.jp)</span>
+                    </div>
+                    <button class="text-red-500 hover:text-red-700">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="ml-4">
+                    <div class="text-sm text-gray-700 mb-2">担当店舗:</div>
+                    <div class="flex flex-wrap gap-2">
+                      <div class="bg-white px-3 py-2 rounded border border-blue-200 flex items-center gap-2">
+                        <span class="text-sm font-medium">Minn 渋谷</span>
+                        <button class="text-red-500 hover:text-red-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button class="bg-white px-3 py-2 rounded border border-dashed border-blue-300 text-blue-600 hover:bg-blue-50 text-sm font-medium">
+                        + 店舗追加
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 担当マネジャー未設定の店舗 -->
+              <div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div class="text-sm font-semibold text-gray-700 mb-3">担当マネジャー未設定の店舗</div>
+                <div class="flex flex-wrap gap-2">
+                  <div class="bg-white px-3 py-2 rounded border border-gray-300 text-sm">Minn 新宿</div>
+                </div>
+              </div>
+
+              <!-- 店舗ごとのVL設定 -->
+              <div class="mt-6">
+                <h4 class="text-md font-bold text-gray-800 mb-3">施設</h4>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded">
+                    <span class="font-semibold">Minn 日本橋</span>
+                    <div class="flex flex-wrap gap-2">
+                      <div class="flex items-center gap-1">
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">山田一郎</span>
+                        <button class="text-red-500 hover:text-red-700">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ VL追加</button>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded">
+                    <span class="font-semibold">Minn 渋谷</span>
+                    <div class="flex flex-wrap gap-2">
+                      <div class="flex items-center gap-1">
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">鈴木次郎</span>
+                        <button class="text-red-500 hover:text-red-700">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-1">
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">山田一郎</span>
+                        <button class="text-red-500 hover:text-red-700">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ VL追加</button>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded">
+                    <span class="font-semibold">Minn 新宿</span>
+                    <button class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ VL追加</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 大阪エリア -->
+            <div class="border-2 border-gray-200 rounded-lg p-6">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold text-purple-700">大阪エリア</h3>
+                <button onclick="openAddAreaManagerModal('osaka')" class="bg-purple-600 text-white px-3 py-1 rounded hover:bg-purple-700 text-sm font-medium">
+                  + マネジャー追加
+                </button>
+              </div>
+
+              <!-- マネジャーごとのセクション -->
+              <div class="space-y-4">
+                <!-- マネジャー1 -->
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <span class="bg-purple-600 text-white px-3 py-1 rounded text-sm font-medium">マネジャー</span>
+                      <span class="font-semibold text-purple-900">佐藤花子</span>
+                      <span class="text-xs text-gray-600">(sato@squeeze.co.jp)</span>
+                    </div>
+                    <button class="text-red-500 hover:text-red-700">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div class="ml-4">
+                    <div class="text-sm text-gray-700 mb-2">担当店舗:</div>
+                    <div class="flex flex-wrap gap-2">
+                      <div class="bg-white px-3 py-2 rounded border border-purple-200 flex items-center gap-2">
+                        <span class="text-sm font-medium">Minn 十三</span>
+                        <button class="text-red-500 hover:text-red-700">
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button class="bg-white px-3 py-2 rounded border border-dashed border-purple-300 text-purple-600 hover:bg-purple-50 text-sm font-medium">
+                        + 店舗追加
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 店舗ごとのVL設定 -->
+              <div class="mt-6">
+                <h4 class="text-md font-bold text-gray-800 mb-3">施設</h4>
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between p-3 bg-white border border-gray-200 rounded">
+                    <span class="font-semibold">Minn 十三</span>
+                    <div class="flex flex-wrap gap-2">
+                      <div class="flex items-center gap-1">
+                        <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">高橋三郎</span>
+                        <button class="text-red-500 hover:text-red-700">
+                          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      <button class="text-xs text-blue-600 hover:text-blue-800 font-medium">+ VL追加</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded">
+            <p><strong>説明:</strong></p>
+            <ul class="list-disc ml-5 mt-2 space-y-1">
+              <li>全体統括（GLOBAL）: 全エリアを統括する最高責任者です。複数名登録可能です</li>
+              <li>マネジャー（AREA）: エリア内の複数店舗を担当できます。各マネジャーに担当店舗を紐づけます</li>
+              <li>店舗VL（BUILDING）: 各店舗に対して複数のVLを設定できます</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- タブコンテンツ: 清掃基準値設定 -->
+      <section class="tab-content" id="tab-cleaning">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold">清掃基準値設定（施設ごと）</h2>
+          </div>
+
+          <!-- 施設ごとの基準値テーブル -->
+          <div class="overflow-x-auto">
+            <table class="settings-table">
+              <thead>
+                <tr>
+                  <th>施設名</th>
+                  <th>目標清掃数/日（室）</th>
+                  <th>1室あたり基準値（分）</th>
+                  <th>設定者</th>
+                  <th>更新日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="font-semibold">Minn 日本橋</span></td>
+                  <td>24室</td>
+                  <td>30分</td>
+                  <td>田中太郎</td>
+                  <td>2024-11-10</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800">編集</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="font-semibold">Minn 渋谷</span></td>
+                  <td>20室</td>
+                  <td>28分</td>
+                  <td>佐藤花子</td>
+                  <td>2024-11-10</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800">編集</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="font-semibold">Minn 新宿</span></td>
+                  <td>18室</td>
+                  <td>35分</td>
+                  <td>田中太郎</td>
+                  <td>2024-11-10</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800">編集</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="font-semibold">Minn 十三</span></td>
+                  <td>22室</td>
+                  <td>30分</td>
+                  <td>佐藤花子</td>
+                  <td>2024-11-09</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800">編集</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded">
+            <p><strong>説明:</strong></p>
+            <ul class="list-disc ml-5 mt-2 space-y-1">
+              <li>目標清掃数/日: その施設で1日あたりに清掃する目標室数</li>
+              <li>1室あたり基準値: 1室の清掃にかける標準的な時間（分）</li>
+              <li>設定者: この基準値を設定・更新したユーザー名</li>
+              <li>施設ごとに部屋の広さや設備が異なるため、個別に基準値を設定できます</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- タブコンテンツ: クレーム種別設定 -->
+      <section class="tab-content" id="tab-complaint">
+        <div class="bg-white rounded-lg shadow p-6">
+          <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold">クレーム種別設定</h2>
+            <button onclick="openAddComplaintTypeModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-medium">
+              + 新規追加
+            </button>
+          </div>
+
+          <!-- テーブル: COMPLAINT_TYPE_MASTER -->
+          <div class="overflow-x-auto">
+            <table class="settings-table">
+              <thead>
+                <tr>
+                  <th>表示順</th>
+                  <th>種別コード</th>
+                  <th>種別名</th>
+                  <th>有効/無効</th>
+                  <th>更新日</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>1</td>
+                  <td>CLEANING</td>
+                  <td>清掃</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-01</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-gray-600">↑</button>
+                    <button class="text-gray-600">↓</button>
+                    <button class="text-red-600 hover:text-red-800 ml-2">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>2</td>
+                  <td>FACILITY</td>
+                  <td>設備</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-01</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-gray-600">↑</button>
+                    <button class="text-gray-600">↓</button>
+                    <button class="text-red-600 hover:text-red-800 ml-2">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>3</td>
+                  <td>AMENITY</td>
+                  <td>備品</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-01</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-gray-600">↑</button>
+                    <button class="text-gray-600">↓</button>
+                    <button class="text-red-600 hover:text-red-800 ml-2">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>4</td>
+                  <td>NOISE</td>
+                  <td>騒音</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-01</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-gray-600">↑</button>
+                    <button class="text-gray-600">↓</button>
+                    <button class="text-red-600 hover:text-red-800 ml-2">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>5</td>
+                  <td>SERVICE</td>
+                  <td>接客・サービス</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-01</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-gray-600">↑</button>
+                    <button class="text-gray-600">↓</button>
+                    <button class="text-red-600 hover:text-red-800 ml-2">無効化</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td>6</td>
+                  <td>OTHER</td>
+                  <td>その他</td>
+                  <td><span class="text-green-600 font-medium">有効</span></td>
+                  <td>2024-11-01</td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 mr-2">編集</button>
+                    <button class="text-gray-600">↑</button>
+                    <button class="text-gray-400">↓</button>
+                    <button class="text-red-600 hover:text-red-800 ml-2">無効化</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="mt-4 text-sm text-gray-600">
+            <p><strong>説明:</strong> クレーム入力時のプルダウン選択肢として使用されます。論理削除（無効化）で管理します。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- タブコンテンツ: 通知先設定 -->
+      <section class="tab-content" id="tab-notification">
+        <div class="bg-white rounded-lg shadow p-6">
+          <h2 class="text-2xl font-bold mb-6">通知先設定</h2>
+
+          <!-- Slack通知先設定 -->
+          <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-blue-700">Slack通知先</h3>
+              <button onclick="openAddSlackWebhookModal()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-medium text-sm">
+                + 新規追加
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="settings-table">
+                <thead>
+                  <tr>
+                    <th>通知先名</th>
+                    <th>Webhook URL</th>
+                    <th>有効/無効</th>
+                    <th>更新日</th>
+                    <th>疎通確認</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">メイン通知チャンネル</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://hooks.slack.com/services/T01*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-10</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('slack', '1', 'メイン通知チャンネル')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">緊急通知チャンネル</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://hooks.slack.com/services/T02*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-10</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('slack', '2', '緊急通知チャンネル')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">東京エリア専用</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://hooks.slack.com/services/T03*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-09</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('slack', '3', '東京エリア専用')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">大阪エリア専用</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://hooks.slack.com/services/T04*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-09</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('slack', '4', '大阪エリア専用')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">テスト用チャンネル</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://hooks.slack.com/services/T05*****</code>
+                    </td>
+                    <td><span class="text-gray-500 font-medium">無効</span></td>
+                    <td>2024-11-08</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('slack', '5', 'テスト用チャンネル')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-green-600 hover:text-green-800 text-sm">有効化</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Google Chat通知先設定 -->
+          <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-bold text-green-700">Google Chat通知先</h3>
+              <button onclick="openAddGoogleChatWebhookModal()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-medium text-sm">
+                + 新規追加
+              </button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="settings-table">
+                <thead>
+                  <tr>
+                    <th>通知先名</th>
+                    <th>Webhook URL</th>
+                    <th>有効/無効</th>
+                    <th>更新日</th>
+                    <th>疎通確認</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">メイン通知スペース</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://chat.googleapis.com/v1/spaces/AAAA*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-10</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('googlechat', '1', 'メイン通知スペース')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">緊急通知スペース</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://chat.googleapis.com/v1/spaces/BBBB*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-10</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('googlechat', '2', '緊急通知スペース')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">東京エリア専用</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://chat.googleapis.com/v1/spaces/CCCC*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-09</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('googlechat', '3', '東京エリア専用')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">大阪エリア専用</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://chat.googleapis.com/v1/spaces/DDDD*****</code>
+                    </td>
+                    <td><span class="text-green-600 font-medium">有効</span></td>
+                    <td>2024-11-09</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('googlechat', '4', '大阪エリア専用')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-red-600 hover:text-red-800 text-sm">無効化</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span class="font-semibold">テスト用スペース</span>
+                    </td>
+                    <td>
+                      <code class="text-xs bg-gray-100 px-2 py-1 rounded">https://chat.googleapis.com/v1/spaces/EEEE*****</code>
+                    </td>
+                    <td><span class="text-gray-500 font-medium">無効</span></td>
+                    <td>2024-11-08</td>
+                    <td>
+                      <button onclick="openTestNotificationModal('googlechat', '5', 'テスト用スペース')" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700 text-xs font-medium">
+                        テスト送信
+                      </button>
+                    </td>
+                    <td>
+                      <button class="text-blue-600 hover:text-blue-800 mr-2 text-sm">編集</button>
+                      <button class="text-green-600 hover:text-green-800 text-sm">有効化</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mt-6 text-sm text-gray-600 bg-gray-50 p-4 rounded">
+            <p><strong>説明:</strong></p>
+            <ul class="list-disc ml-5 mt-2 space-y-1">
+              <li>通知先名: 分かりやすい名前を設定してください</li>
+              <li>Webhook URL: SlackまたはGoogle ChatのIncoming Webhook URLを設定します</li>
+              <li>※ 複数のチャンネル運用が必要になった場合のみ、追加のWebhook URLを登録してください（最大5つまで登録可能）</li>
+              <li>※ Webhook URLはパブリックチャンネル（Slackの場合）またはパブリックスペース（Google Chatの場合）のみ使用可能です</li>
+              <li>クルーが残業入力・クレーム入力・売止め入力時に、登録済みの通知先から選択して送信できます</li>
+              <li>※ Webhook URLは部分的にマスクして表示されます</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- テスト送信モーダル -->
+  <div id="testNotificationModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-bold" id="modalTitle">通知テスト送信</h3>
+          <button onclick="closeTestNotificationModal()" class="text-gray-400 hover:text-gray-600">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="px-6 py-4">
+        <div class="mb-4">
+          <p class="text-sm text-gray-600 mb-2">
+            通知先: <span class="font-semibold" id="modalNotificationName"></span>
+          </p>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-semibold mb-2">テストメッセージ</label>
+          <textarea
+            id="testMessage"
+            class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+            rows="3"
+            placeholder="送信するテストメッセージを入力してください">【テスト送信】通知先設定のテストです</textarea>
+        </div>
+
+        <div class="mb-4">
+          <label class="flex items-center">
+            <input type="checkbox" id="includeMention" class="mr-2" onchange="toggleMentionInput()">
+            <span class="text-sm font-semibold">メンションを付ける</span>
+          </label>
+        </div>
+
+        <div id="mentionSection" class="mb-4 hidden">
+          <label class="block text-sm font-semibold mb-2">メンション対象</label>
+          <div class="space-y-2">
+            <div id="slackMentionInput" class="hidden">
+              <input
+                type="text"
+                id="slackUserId"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                placeholder="Slack User ID (例: U01234ABCDE)">
+              <p class="text-xs text-gray-500 mt-1">※ 権限登録画面で登録されているSlack User IDを入力してください</p>
+            </div>
+            <div id="googleChatMentionInput" class="hidden">
+              <select id="mentionTargetType" class="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-2">
+                <option value="all">@all (全員)</option>
+                <option value="user">特定ユーザー</option>
+              </select>
+              <input
+                type="text"
+                id="googleChatUserId"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm hidden"
+                placeholder="User ID (例: 123456789012345678901)">
+              <p class="text-xs text-gray-500 mt-1">※ Google ChatのUser IDを入力してください</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button
+            onclick="sendTestNotification()"
+            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-medium">
+            送信
+          </button>
+          <button
+            onclick="closeTestNotificationModal()"
+            class="flex-1 bg-gray-200 text-gray-700 px-4 py-2 rounded hover:bg-gray-300 font-medium">
+            キャンセル
+          </button>
+        </div>
+
+        <div id="testResult" class="mt-4 hidden">
+          <div class="p-3 rounded text-sm"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('collapsed');
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      // すべてのタブボタンとコンテンツから active クラスを削除
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // クリックされたタブボタンに active クラスを追加
+      event.target.classList.add('active');
+
+      // 指定されたタブコンテンツに active クラスを追加
+      const targetTab = document.getElementById('tab-' + tabName);
+      if (targetTab) {
+        targetTab.classList.add('active');
+      }
+    }
+
+    // モーダル開く関数（プレースホルダー）
+    function openAddRoleModal() {
+      alert('権限追加モーダル（実装予定）');
+    }
+
+    function openAddMappingModal() {
+      alert('施設名マッピング追加モーダル（実装予定）');
+    }
+
+    function openAddFacilityModal() {
+      alert('施設追加モーダル（実装予定）');
+    }
+
+    function openEditAreaModal(areaId) {
+      alert('エリア設定編集モーダル（実装予定）: ' + areaId);
+    }
+
+    function openWebhookModal(facilityId) {
+      alert('Webhook URL設定モーダル（実装予定）: ' + facilityId);
+    }
+
+    function filterByArea() {
+      const filter = document.getElementById('areaFilterSelect').value;
+      console.log('Filter by area:', filter);
+      // TODO: エリアフィルター実装
+    }
+
+    function openEditCleaningStandardModal(facilityId) {
+      alert('清掃基準値編集モーダル（実装予定）: ' + facilityId);
+    }
+
+    function openAddComplaintTypeModal() {
+      alert('クレーム種別追加モーダル（実装予定）');
+    }
+
+    function openAddSlackWebhookModal() {
+      alert('Slack Webhook追加モーダル（実装予定）');
+    }
+
+    function openAddGoogleChatWebhookModal() {
+      alert('Google Chat Webhook追加モーダル（実装予定）');
+    }
+
+    // テスト送信モーダル関連
+    let currentNotificationType = '';
+    let currentNotificationId = '';
+
+    function openTestNotificationModal(type, id, name) {
+      currentNotificationType = type;
+      currentNotificationId = id;
+
+      const modal = document.getElementById('testNotificationModal');
+      const modalName = document.getElementById('modalNotificationName');
+      const slackMention = document.getElementById('slackMentionInput');
+      const googleChatMention = document.getElementById('googleChatMentionInput');
+
+      modalName.textContent = name;
+
+      // メンション入力欄の表示切り替え
+      if (type === 'slack') {
+        slackMention.classList.remove('hidden');
+        googleChatMention.classList.add('hidden');
+      } else {
+        slackMention.classList.add('hidden');
+        googleChatMention.classList.remove('hidden');
+      }
+
+      // モーダル表示
+      modal.classList.remove('hidden');
+
+      // 初期化
+      document.getElementById('includeMention').checked = false;
+      document.getElementById('mentionSection').classList.add('hidden');
+      document.getElementById('testResult').classList.add('hidden');
+    }
+
+    function closeTestNotificationModal() {
+      const modal = document.getElementById('testNotificationModal');
+      modal.classList.add('hidden');
+
+      // フォームをリセット
+      document.getElementById('testMessage').value = '【テスト送信】通知先設定のテストです';
+      document.getElementById('includeMention').checked = false;
+      document.getElementById('slackUserId').value = '';
+      document.getElementById('googleChatUserId').value = '';
+      document.getElementById('mentionTargetType').value = 'all';
+      document.getElementById('testResult').classList.add('hidden');
+    }
+
+    function toggleMentionInput() {
+      const includeMention = document.getElementById('includeMention').checked;
+      const mentionSection = document.getElementById('mentionSection');
+
+      if (includeMention) {
+        mentionSection.classList.remove('hidden');
+      } else {
+        mentionSection.classList.add('hidden');
+      }
+    }
+
+    // Google Chatのメンション種別切り替え
+    document.addEventListener('change', function(e) {
+      if (e.target.id === 'mentionTargetType') {
+        const userIdInput = document.getElementById('googleChatUserId');
+        if (e.target.value === 'user') {
+          userIdInput.classList.remove('hidden');
+        } else {
+          userIdInput.classList.add('hidden');
+        }
+      }
+    });
+
+    function sendTestNotification() {
+      const message = document.getElementById('testMessage').value;
+      const includeMention = document.getElementById('includeMention').checked;
+      const resultDiv = document.getElementById('testResult');
+      const resultContent = resultDiv.querySelector('div');
+
+      // バリデーション
+      if (!message.trim()) {
+        showTestResult('error', 'メッセージを入力してください');
+        return;
+      }
+
+      // メンション情報の取得
+      let mentionData = null;
+      if (includeMention) {
+        if (currentNotificationType === 'slack') {
+          const slackUserId = document.getElementById('slackUserId').value;
+          if (!slackUserId.trim()) {
+            showTestResult('error', 'Slack User IDを入力してください');
+            return;
+          }
+          mentionData = { type: 'slack', userId: slackUserId };
+        } else {
+          const mentionType = document.getElementById('mentionTargetType').value;
+          if (mentionType === 'user') {
+            const googleChatUserId = document.getElementById('googleChatUserId').value;
+            if (!googleChatUserId.trim()) {
+              showTestResult('error', 'User IDを入力してください');
+              return;
+            }
+            mentionData = { type: 'googlechat', mentionType: 'user', userId: googleChatUserId };
+          } else {
+            mentionData = { type: 'googlechat', mentionType: 'all' };
+          }
+        }
+      }
+
+      // テスト送信のシミュレーション
+      console.log('Test notification:', {
+        notificationType: currentNotificationType,
+        notificationId: currentNotificationId,
+        message: message,
+        mention: mentionData
+      });
+
+      // TODO: 実際のAPI呼び出しに置き換え
+      // 成功のシミュレーション
+      setTimeout(() => {
+        showTestResult('success', 'テスト送信が完了しました。通知先を確認してください。');
+      }, 500);
+    }
+
+    function showTestResult(type, message) {
+      const resultDiv = document.getElementById('testResult');
+      const resultContent = resultDiv.querySelector('div');
+
+      resultDiv.classList.remove('hidden');
+
+      if (type === 'success') {
+        resultContent.className = 'p-3 rounded text-sm bg-green-50 text-green-800 border border-green-200';
+      } else {
+        resultContent.className = 'p-3 rounded text-sm bg-red-50 text-red-800 border border-red-200';
+      }
+
+      resultContent.textContent = message;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('管理者設定画面を初期化しました');
+    });
+  </script>
+</body>
+</html>

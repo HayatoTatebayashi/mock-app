@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>残業履歴 - 4ZERO-APP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    }
+    /* 表の横スクロール対応 */
+    .table-container {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-width: 100%;
+      max-height: calc(100vh - 400px);
+      -webkit-overflow-scrolling: touch;
+      position: relative;
+    }
+    /* スクロールバーのスタイル */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+    /* Firefox用 */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #d1d5db transparent;
+    }
+    .table-container table {
+      min-width: 1000px;
+      width: 100%;
+      table-layout: auto;
+    }
+    /* テーブルヘッダー固定 */
+    .table-container thead {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: #f3f4f6;
+    }
+    .table-container thead tr {
+      background: #f3f4f6;
+    }
+    .table-container th,
+    .table-container td {
+      white-space: nowrap;
+      padding: 0.75rem 1rem;
+    }
+    /* Sidebar styles */
+    .sidebar {
+      transition: width 0.3s ease;
+      width: 16rem;
+      min-width: 16rem;
+      position: fixed;
+      left: 0;
+      top: 64px;
+      height: calc(100vh - 64px);
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+    .sidebar.closed {
+      width: 56px;
+      min-width: 56px;
+    }
+    .content-wrapper {
+      margin-left: 16rem;
+      margin-top: 64px;
+      transition: margin-left 0.3s ease;
+      width: calc(100% - 16rem);
+    }
+    .sidebar.closed + .content-wrapper {
+      margin-left: 56px;
+      width: calc(100% - 56px);
+    }
+    .sidebar.closed nav {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .sidebar-toggle {
+      position: absolute;
+      left: 8px;
+      bottom: 16px;
+      background: #2e4265;
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .sidebar-toggle:hover {
+      background: #3d5278;
+      transform: scale(1.05);
+    }
+    /* 閉じた時のアイコンメニュー */
+    .sidebar-icons {
+      position: absolute;
+      left: 0;
+      top: 12px;
+      width: 56px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      padding: 8px;
+    }
+    .sidebar.closed .sidebar-icons {
+      display: flex;
+    }
+    .sidebar-icon-item {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #2e4265;
+    }
+    .sidebar-icon-item:hover {
+      background: #3d5278;
+      color: white;
+      transform: scale(1.05);
+    }
+    .sidebar-icon-item.active {
+      background: #2e4265;
+      color: white;
+    }
+    .main-content {
+      flex: 1;
+      transition: margin-left 0.3s ease;
+    }
+    /* タブスタイル */
+    .tab-container {
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 1rem;
+    }
+    .tab-list {
+      display: flex;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .tab-button {
+      padding: 0.5rem 1rem;
+      background: #f3f4f6;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .tab-button:hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .tab-button.active {
+      background: white;
+      color: #2e4265;
+      border-bottom-color: #2e4265;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    /* レスポンシブ対応 */
+    @media (max-width: 768px) {
+      .sidebar {
+        box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+      }
+      .sidebar.closed {
+        width: 0;
+        min-width: 0;
+      }
+      .sidebar.closed .sidebar-icons {
+        display: none;
+      }
+      .sidebar.closed .sidebar-toggle {
+        left: 12px;
+        top: 80px;
+        position: fixed;
+      }
+      .content-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+      }
+      .main-content {
+        padding: 1rem !important;
+      }
+    }
+
+    /* 日付単位ボタン */
+    .date-unit-btn {
+      padding: 0.375rem 0.75rem;
+      background: white;
+      border: none;
+      border-right: 1px solid #d1d5db;
+      cursor: pointer;
+      font-size: 0.813rem;
+      transition: all 0.2s;
+    }
+
+    /* テーブルスクロール対応 */
+    .table-container {
+      position: relative;
+      overflow-x: auto;
+      max-width: 100%;
+    }
+
+    .sticky {
+      position: sticky;
+      background: inherit;
+    }
+
+    .z-10 {
+      z-index: 10;
+    }
+    .date-unit-btn:last-child {
+      border-right: none;
+    }
+    .date-unit-btn:hover {
+      background: #f3f4f6;
+    }
+    .date-unit-btn.active {
+      background: #2563eb;
+      color: white;
+    }
+
+    /* Period toggle buttons */
+    .period-button {
+      padding: 0.5rem 1.5rem;
+      border: 2px solid #2e4265;
+      background: white;
+      color: #2e4265;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .period-button:first-child {
+      border-radius: 0.375rem 0 0 0.375rem;
+    }
+    .period-button:last-child {
+      border-radius: 0 0.375rem 0.375rem 0;
+      border-left: none;
+    }
+    .period-button.active {
+      background: #2e4265;
+      color: white;
+    }
+    .period-button:hover:not(.active) {
+      background: #f3f4f6;
+    }
+    /* Modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 50;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background-color: white;
+      padding: 2rem;
+      border-radius: 0.5rem;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    /* Shift badge colors */
+    .badge-yellow {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+    .badge-green {
+      background-color: #d1fae5;
+      color: #065f46;
+    }
+    .badge-blue {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+    .badge-purple {
+      background-color: #e9d5ff;
+      color: #6b21a8;
+    }
+    /* Clickable row */
+    .clickable-row {
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .clickable-row:hover {
+      background-color: #f9fafb;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <!-- ヘッダー -->
+  <header class="bg-[#2e4265] text-white px-6 py-4 flex items-center justify-between h-16 fixed top-0 left-0 right-0 z-50">
+    <div class="flex items-center gap-4">
+      <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-[#3d5278] rounded">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <h1 class="text-2xl font-bold">4ZERO-APP</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right">
+        <div class="text-sm">山田 太郎</div>
+        <div class="text-xs text-gray-300">user@squeeze.co.jp</div>
+      </div>
+      <button class="bg-white text-[#2e4265] px-4 py-2 rounded hover:bg-gray-100">
+        管理画面
+      </button>
+    </div>
+  </header>
+
+  <!-- サイドバー -->
+  <aside id="sidebar" class="sidebar w-32 bg-[#e8e8e8]">
+      <!-- 開閉ボタン -->
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <svg id="sidebarIcon" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <!-- 閉じた時のアイコンメニュー -->
+      <div class="sidebar-icons">
+        <div class="sidebar-icon-item" onclick="window.location.href='./store-display.html'" title="ダッシュボード">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        </div>
+        <div class="sidebar-icon-item active" title="残業履歴">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+      </div>
+
+      <nav>
+        <!-- 4ZERO 親トグル -->
+        <div class="mb-2">
+          <button onclick="toggleFourZero()" class="w-full flex items-center justify-between p-3 hover:bg-gray-300 rounded font-bold">
+            <span>4ZERO</span>
+            <svg id="fourZeroIcon" class="w-4 h-4 transition-transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <div id="fourZeroContent" class="ml-4 mt-1">
+            <!-- 全施設 -->
+            <div class="p-2 pl-4 font-semibold">
+              全施設
+            </div>
+
+            <!-- 残業履歴 -->
+            <a href="#" onclick="return false;" class="block p-2 pl-4 bg-gray-300 rounded ml-4 text-sm font-semibold">
+              残業履歴
+            </a>
+
+            <!-- エリア別 -->
+            <button onclick="toggleArea()" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded">
+              <span>エリア別</span>
+              <svg id="areaIcon" class="w-4 h-4 transition-transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            <div id="areaContent" class="ml-4 mt-1">
+                <!-- 東京エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('tokyo')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>東京</span>
+                    <svg id="tokyoIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="tokyoContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 日本橋</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 浅草</a>
+                  </div>
+                </div>
+
+                <!-- 大阪エリア -->
+                <div>
+                  <button onclick="toggleSidebarArea('osaka')" class="w-full flex items-center justify-between p-2 pl-4 hover:bg-gray-300 rounded text-sm">
+                    <span>大阪</span>
+                    <svg id="osakaIcon" class="w-3 h-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                  <div id="osakaContent" class="ml-4 hidden">
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 十三</a>
+                    <a href="#" class="block p-2 pl-4 hover:bg-gray-300 rounded text-xs">Minn 梅田</a>
+                  </div>
+                </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="content-wrapper">
+    <main class="main-content p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-2xl font-bold"><span id="storeName">Minn 日本橋</span>： ダッシュボード</h2>
+      </div>
+
+      <!-- タブナビゲーション -->
+      <div class="tab-container">
+        <div class="tab-list">
+          <button class="tab-button" onclick="switchTab('dashboard')">ダッシュボード</button>
+          <button class="tab-button active" onclick="switchTab('overtime')">清掃・残業</button>
+        </div>
+      </div>
+
+      <!-- タブコンテンツ: ダッシュボード -->
+      <section class="tab-content" id="tab-dashboard">
+        <div class="bg-white rounded-lg shadow p-6">
+          <p class="text-gray-600">ダッシュボードの内容はこちらに表示されます。</p>
+        </div>
+      </section>
+
+      <!-- タブコンテンツ: 残業履歴 -->
+      <section class="tab-content active" id="tab-overtime">
+
+      <!-- 統計情報 -->
+      <!--
+      <div class="bg-white rounded-lg shadow mb-6 p-6">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-300">
+          <h3 class="text-xl font-bold">清掃・残業サマリー</h3>
+          <div class="flex items-center gap-3">
+            <label class="text-sm text-gray-600">表示月:</label>
+            <select id="overtime-month-filter" onchange="filterOvertimeByMonth()" class="border border-gray-300 rounded-lg px-3 py-1 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="2025-01">2025年1月</option>
+              <option value="2024-12">2024年12月</option>
+              <option value="2024-11" selected>2024年11月</option>
+              <option value="2024-10">2024年10月</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="text-center">
+            <div class="text-sm text-gray-600 mb-1">清掃基準達成率</div>
+            <div class="text-3xl font-bold text-orange-600" >87.5%</div>
+            <div class="text-xs mt-1">
+              <span class="text-green-600">↑ +0.1 (87.4%)</span>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-sm text-gray-600 mb-1">1日平均残業回数</div>
+            <div class="text-3xl font-bold text-blue-600" id="avgDailyCount">0.4回</div>
+            <div class="text-xs mt-1" id="avgDailyCountDiff">
+              <span class="text-green-600">↑ +0.1 (33.3%)</span>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-sm text-gray-600 mb-1">1回平均残業時間</div>
+            <div class="text-3xl font-bold text-green-600" id="avgHoursPerSession">2.0h</div>
+            <div class="text-xs mt-1" id="avgHoursPerSessionDiff">
+              <span class="text-green-600">↑ +0.3h (17.6%)</span>
+            </div>
+          </div>
+          <div class="text-center">
+            <div class="text-sm text-gray-600 mb-1">最多時間帯</div>
+            <div class="text-3xl font-bold text-purple-600" id="mostCommonShift">遅番</div>
+          </div>
+        </div>
+      </div>
+      -->
+
+      <!-- グラフエリア -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- 残業時間推移グラフ -->
+        <div class="bg-white rounded-lg shadow">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-xl font-bold" id="overtimeChartTitle">残業時間 当月推移</h3>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-medium">表示単位:</label>
+              <select id="overtimeChartAggregation" class="border border-gray-300 rounded px-3 py-2 text-sm" onchange="updateOvertimeChart()">
+                <option value="daily">日次</option>
+                <option value="weekly">週次</option>
+                <option value="monthly">月次</option>
+                <option value="byshift">時間帯別</option>
+              </select>
+            </div>
+          </div>
+          <div class="p-6" style="height: 350px;">
+            <canvas id="overtimeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 清掃達成率推移グラフ -->
+        <div class="bg-white rounded-lg shadow">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-xl font-bold">清掃達成率 当月推移</h3>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-medium">表示単位:</label>
+              <select id="cleaningChartAggregation" class="border border-gray-300 rounded px-3 py-2 text-sm" onchange="updateCleaningChart()">
+                <option value="daily">日次</option>
+                <option value="weekly">週次</option>
+                <option value="monthly">月次</option>
+              </select>
+            </div>
+          </div>
+          <div class="p-6" style="height: 350px;">
+            <canvas id="cleaningChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="bg-white rounded-lg shadow-sm">
+        <div class="p-6">
+          <div class="flex items-start justify-between mb-4 gap-4">
+            <h2 class="text-lg font-semibold text-gray-800">清掃・残業数一覧</h2>
+
+            <!-- Filter Area -->
+            <div class="flex gap-4 items-end flex-wrap">
+              <!-- 日付単位 -->
+              <div>
+                <label class="block text-xs font-medium mb-1">日付単位</label>
+                <div class="flex gap-0 border border-gray-300 rounded overflow-hidden">
+                  <button class="date-unit-btn active" id="weeklyBtn" onclick="setOvertimePeriod('weekly')">週次</button>
+                  <button class="date-unit-btn" id="monthlyBtn" onclick="setOvertimePeriod('monthly')">月次</button>
+                </div>
+              </div>
+
+              <!-- 日付範囲 -->
+              <div>
+                <label class="block text-xs font-medium mb-1" id="overtimeDateLabel">月の範囲</label>
+                <div class="flex gap-2 items-center">
+                  <input type="date" id="startDate" value="2024-11-01" class="border border-gray-300 rounded px-2 py-1 text-xs">
+                  <span class="text-gray-500 text-xs">〜</span>
+                  <input type="date" id="endDate" value="2024-11-10" class="border border-gray-300 rounded px-2 py-1 text-xs">
+                </div>
+              </div>
+
+              <!-- 時間帯フィルター -->
+              <div>
+                <label class="block text-xs font-medium mb-1">時間帯</label>
+                <select id="shiftFilter" class="border border-gray-300 rounded px-2 py-1 text-xs">
+                  <option value="全て">全て</option>
+                  <option value="早番">早番</option>
+                  <option value="中番">中番</option>
+                  <option value="遅番">遅番</option>
+                  <option value="夜番">夜番</option>
+                </select>
+              </div>
+
+              <!-- 表示するボタン -->
+              <div>
+                <label class="block text-xs font-medium mb-1 opacity-0">.</label>
+                <button class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 font-medium text-xs" onclick="filterOvertimeData()">
+                  表示する
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="table-container overflow-x-auto max-h-[800px] overflow-y-auto">
+            <table class="min-w-full border-collapse" id="overtimeTable">
+              <thead>
+                <tr id="overtimeTableHeader">
+                  <!-- ヘッダーは JavaScript で生成されます -->
+                </tr>
+              </thead>
+              <tbody id="overtimeTableBody">
+                <!-- Table rows will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">残業記録編集</h2>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">日付</label>
+          <input type="text" id="editDate" readonly class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">時間帯</label>
+          <select id="editShift" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <option value="早番">早番</option>
+            <option value="中番">中番</option>
+            <option value="遅番">遅番</option>
+            <option value="夜番">夜番</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">残業時間（時間）</label>
+          <input type="number" id="editHours" step="0.5" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">理由</label>
+          <textarea id="editReason" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-6">
+        <button onclick="closeEditModal()" class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors">
+          キャンセル
+        </button>
+        <button onclick="saveOvertimeEdit()" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+          保存
+        </button>
+      </div>
+    </div>
+  </div>
+
+      </section>
+      <!-- 残業履歴タブ終了 -->
+
+    </main>
+  </div>
+
+  <script>
+    // Sample overtime data (2週間分のダミーデータ)
+    let overtimeData = [
+      // 11月第1週 (11/1-11/3)
+      { id: 1, date: '2024-11-01', staff: '田中太郎', shift: '早番', hours: 2.0, reason: '翌日の準備作業' },
+      { id: 2, date: '2024-11-01', staff: '佐藤花子', shift: '中番', hours: 1.5, reason: '在庫整理' },
+      { id: 3, date: '2024-11-01', staff: '鈴木一郎', shift: '遅番', hours: 1.0, reason: 'レジ締め作業' },
+      { id: 4, date: '2024-11-02', staff: '山田美咲', shift: '早番', hours: 2.5, reason: '急なトラブル対応' },
+      { id: 5, date: '2024-11-02', staff: '高橋健太', shift: '中番', hours: 1.5, reason: '商品陳列作業' },
+      { id: 6, date: '2024-11-02', staff: '田中太郎', shift: '夜番', hours: 3.0, reason: '深夜清掃' },
+      { id: 7, date: '2024-11-03', staff: '佐藤花子', shift: '早番', hours: 1.0, reason: 'ディスプレイ変更' },
+      { id: 8, date: '2024-11-03', staff: '鈴木一郎', shift: '中番', hours: 2.0, reason: '在庫確認作業' },
+
+      // 11月第2週 (11/4-11/10)
+      { id: 9, date: '2024-11-04', staff: '山田美咲', shift: '早番', hours: 1.5, reason: '新商品陳列' },
+      { id: 10, date: '2024-11-04', staff: '高橋健太', shift: '中番', hours: 3.0, reason: '棚卸し作業' },
+      { id: 11, date: '2024-11-04', staff: '田中太郎', shift: '遅番', hours: 2.0, reason: 'クレーム対応' },
+      { id: 12, date: '2024-11-05', staff: '佐藤花子', shift: '早番', hours: 1.5, reason: '発注作業' },
+      { id: 13, date: '2024-11-05', staff: '鈴木一郎', shift: '中番', hours: 2.0, reason: '売上集計' },
+      { id: 14, date: '2024-11-05', staff: '山田美咲', shift: '夜番', hours: 2.5, reason: '清掃作業' },
+      { id: 15, date: '2024-11-06', staff: '高橋健太', shift: '早番', hours: 2.0, reason: '機器メンテナンス' },
+      { id: 16, date: '2024-11-06', staff: '田中太郎', shift: '遅番', hours: 1.5, reason: 'レイアウト変更' },
+      { id: 17, date: '2024-11-07', staff: '佐藤花子', shift: '早番', hours: 2.5, reason: '月次報告書作成' },
+      { id: 18, date: '2024-11-07', staff: '鈴木一郎', shift: '中番', hours: 1.0, reason: 'POP作成' },
+      { id: 19, date: '2024-11-07', staff: '山田美咲', shift: '遅番', hours: 2.0, reason: '在庫整理' },
+      { id: 20, date: '2024-11-08', staff: '高橋健太', shift: '早番', hours: 1.5, reason: '新人研修' },
+      { id: 21, date: '2024-11-08', staff: '田中太郎', shift: '中番', hours: 2.5, reason: 'イベント準備' },
+      { id: 22, date: '2024-11-09', staff: '佐藤花子', shift: '早番', hours: 1.0, reason: '接客研修' },
+      { id: 23, date: '2024-11-09', staff: '鈴木一郎', shift: '遅番', hours: 2.0, reason: '在庫調整' },
+      { id: 24, date: '2024-11-09', staff: '山田美咲', shift: '夜番', hours: 3.0, reason: '棚卸し準備' },
+      { id: 25, date: '2024-11-10', staff: '高橋健太', shift: '早番', hours: 2.0, reason: '清掃作業' },
+      { id: 26, date: '2024-11-10', staff: '田中太郎', shift: '中番', hours: 1.5, reason: '発注処理' }
+    ];
+
+    let currentEditId = null;
+
+    // Get day of week in Japanese
+    function getDayOfWeek(dateString) {
+      const days = ['日', '月', '火', '水', '木', '金', '土'];
+      const date = new Date(dateString);
+      return days[date.getDay()];
+    }
+
+    // Get badge class for shift
+    function getShiftBadgeClass(shift) {
+      const badges = {
+        '早番': 'badge-yellow',
+        '中番': 'badge-green',
+        '遅番': 'badge-blue',
+        '夜番': 'badge-purple'
+      };
+      return badges[shift] || 'badge-yellow';
+    }
+
+    // Check if date is today
+    function isToday(dateString) {
+      const today = new Date('2025-11-14'); // Using the current date from environment
+      const checkDate = new Date(dateString);
+      return checkDate.toDateString() === today.toDateString();
+    }
+
+    // Filter overtime data
+    function filterOvertimeData() {
+      const startDate = document.getElementById('startDate').value;
+      const endDate = document.getElementById('endDate').value;
+      const shiftFilter = document.getElementById('shiftFilter').value;
+
+      let filtered = overtimeData.filter(record => {
+        const dateMatch = record.date >= startDate && record.date <= endDate;
+        const shiftMatch = shiftFilter === '全て' || record.shift === shiftFilter;
+        return dateMatch && shiftMatch;
+      });
+
+      updateOvertimeSummary(filtered);
+      renderOvertimeTable(filtered);
+    }
+
+    // Switch period (weekly/monthly)
+    function setOvertimePeriod(period) {
+      const weeklyBtn = document.getElementById('weeklyBtn');
+      const monthlyBtn = document.getElementById('monthlyBtn');
+      const startDateInput = document.getElementById('startDate');
+      const endDateInput = document.getElementById('endDate');
+      const dateLabel = document.getElementById('overtimeDateLabel');
+
+      // ボタンのアクティブ状態を更新
+      document.querySelectorAll('.date-unit-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+
+      if (period === 'weekly') {
+        weeklyBtn.classList.add('active');
+        dateLabel.textContent = '週の範囲';
+        // Set to current week (Mon-Sun) - 月曜日から日曜日
+        const today = new Date('2025-11-14'); // Use environment date
+        const dayOfWeek = today.getDay(); // 0=日, 1=月, 2=火, ..., 6=土
+
+        // 月曜日を週の始まりとする
+        // 日曜日の場合は前週の月曜日、それ以外は今週の月曜日
+        let daysFromMonday;
+        if (dayOfWeek === 0) { // 日曜日
+          daysFromMonday = 6; // 6日前の月曜日
+        } else {
+          daysFromMonday = dayOfWeek - 1; // 月曜日からの日数
+        }
+
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - daysFromMonday);
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+
+        startDateInput.value = monday.toISOString().split('T')[0];
+        endDateInput.value = sunday.toISOString().split('T')[0];
+      } else if (period === 'monthly') {
+        monthlyBtn.classList.add('active');
+        dateLabel.textContent = '月の範囲';
+        // Set to 2 weeks (11/1-11/10)
+        startDateInput.value = '2024-11-01';
+        endDateInput.value = '2024-11-10';
+      }
+
+      filterOvertimeData();
+    }
+
+    // Update summary cards (統計は filterOvertimeByMonth で更新されるため、この関数は不要)
+    function updateOvertimeSummary(data = overtimeData) {
+      // この関数は現在使用されていません
+      // 統計情報は filterOvertimeByMonth() で更新されます
+    }
+
+    // Render overtime table
+    function renderOvertimeTable(data = overtimeData) {
+      const tbody = document.getElementById('overtimeTableBody');
+      const header = document.getElementById('overtimeTableHeader');
+
+      // 日付の範囲を取得
+      const startDateStr = document.getElementById('startDate').value;
+      const endDateStr = document.getElementById('endDate').value;
+      const startDate = new Date(startDateStr + 'T00:00:00');
+      const endDate = new Date(endDateStr + 'T00:00:00');
+
+      // 日付の配列を生成
+      const dates = [];
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        dates.push(new Date(d));
+      }
+
+      // 週ごとにグループ化
+      const weeks = [];
+      let currentWeek = [];
+      dates.forEach((date, index) => {
+        currentWeek.push(date);
+        const dayOfWeek = date.getDay();
+        // 日曜日または最後の日付で週を区切る
+        if (dayOfWeek === 0 || index === dates.length - 1) {
+          weeks.push([...currentWeek]);
+          currentWeek = [];
+        }
+      });
+
+      // 週の開始日を取得（合計列の表示用）
+      const [year, month, day] = startDateStr.split('-');
+      const weekLabel = `${parseInt(month)}/${parseInt(day)}週`;
+
+      // ヘッダーを生成（項目 + 小項目 + 週ごとの日付 + 週合計 + 月合計）
+      header.innerHTML = '<th class="border border-gray-300 px-4 py-2 bg-gray-100 text-xs font-medium text-gray-700 text-center sticky left-0 z-10 bg-gray-100">項目</th>';
+      header.innerHTML += '<th class="border border-gray-300 px-4 py-2 bg-gray-100 text-xs font-medium text-gray-700 text-center">小項目</th>';
+
+      // 各週の日付と週合計を追加
+      weeks.forEach((weekDates, weekIndex) => {
+        weekDates.forEach(date => {
+          const dateStr = date.toISOString().split('T')[0];
+          const dayOfWeek = getDayOfWeek(dateStr);
+          const [y, m, d] = dateStr.split('-');
+          const formattedDate = `${parseInt(m)}/${parseInt(d)}`;
+          header.innerHTML += `
+            <th class="border border-gray-300 px-2 py-3 bg-gray-100 text-xs font-medium text-gray-700 text-center min-w-[120px] date-column week-${weekIndex}">
+              ${formattedDate}<br><span class="text-gray-500">(${dayOfWeek})</span>
+            </th>
+          `;
+        });
+
+        // 週合計列を追加（折りたたみボタン付き）
+        const weekStart = weekDates[0];
+        const weekEnd = weekDates[weekDates.length - 1];
+        const [wy, wm, wd] = weekStart.toISOString().split('T')[0].split('-');
+        const [ewy, ewm, ewd] = weekEnd.toISOString().split('T')[0].split('-');
+        const weekLabelText = `${parseInt(wm)}/${parseInt(wd)}-${parseInt(ewd)}`;
+        header.innerHTML += `
+          <th class="border border-gray-300 px-3 py-3 bg-yellow-100 text-xs font-medium text-gray-700 text-center week-total-column">
+            <div class="flex items-center justify-center gap-1">
+              <button onclick="toggleWeek(${weekIndex})" class="hover:bg-yellow-200 rounded p-1">
+                <svg id="weekIcon${weekIndex}" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              <div>週合計<br><span class="text-gray-500">${weekLabelText}</span></div>
+            </div>
+          </th>
+        `;
+      });
+
+      // 月合計列を追加
+      header.innerHTML += `
+        <th class="border border-gray-300 px-4 py-2 bg-blue-100 text-xs font-medium text-gray-700 text-center">
+          <div class="flex items-center justify-center gap-1">
+            <button onclick="toggleDateColumns()" class="hover:bg-gray-200 rounded p-1">
+              <svg id="dateColumnIcon" class="w-4 h-4 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+            </button>
+            <div>月合計</div>
+          </div>
+        </th>
+      `;
+
+      // テーブルボディをクリア
+      tbody.innerHTML = '';
+
+      // 時間帯の配列と小項目の定義
+      const shifts = [
+        { name: '早番', subItems: ['残業', '残業理由', '清掃人数', 'タイミー時間'] },
+        { name: '中番', subItems: ['残業', '残業理由', '清掃人数','タイミー時間'] },
+        { name: '遅番', subItems: ['残業', '残業理由'] },
+        { name: '夜番', subItems: ['残業', '残業理由'] }
+      ];
+
+      // 時間帯ごとの行を生成
+      shifts.forEach(shift => {
+        if (shift.subItems.length > 0) {
+          // 小項目がある場合
+          shift.subItems.forEach((subItem, subIndex) => {
+            const tr = document.createElement('tr');
+
+            // 項目セル（最初の小項目のみ表示、rowspanで結合）
+            if (subIndex === 0) {
+              const shiftCell = document.createElement('td');
+              shiftCell.className = 'border border-gray-300 px-4 py-3 bg-gray-50 font-medium text-sm text-center sticky left-0 z-10 bg-gray-50';
+              shiftCell.textContent = shift.name;
+              shiftCell.rowSpan = shift.subItems.length;
+              tr.appendChild(shiftCell);
+            }
+
+            // 小項目セル
+            const subItemCell = document.createElement('td');
+            subItemCell.className = 'border border-gray-300 px-3 py-3 bg-gray-50 text-xs text-center';
+            subItemCell.textContent = subItem;
+            tr.appendChild(subItemCell);
+
+            // 各週の日付セルと週合計セル
+            let monthTotal = 0;
+            weeks.forEach((weekDates, weekIndex) => {
+              let weekTotal = 0;
+
+              // 週の各日付のセル
+              weekDates.forEach(date => {
+                const dateStr = date.toISOString().split('T')[0];
+                const records = data.filter(r => r.date === dateStr && r.shift === shift.name);
+                const td = document.createElement('td');
+                td.className = `border border-gray-300 px-2 py-3 text-xs date-column week-${weekIndex}`;
+
+                if (records.length > 0) {
+                  const record = records[0];
+                  const todayRecord = isToday(record.date);
+
+                  if (todayRecord) {
+                    td.className += ' cursor-pointer hover:bg-blue-50';
+                    td.onclick = () => editOvertime(record.id);
+                  }
+
+                  // 小項目に応じて表示内容を変更
+                  if (subItem === '残業') {
+                    td.innerHTML = `<div class="font-semibold text-blue-600 text-center">${record.hours.toFixed(1)}h</div>`;
+                    weekTotal += record.hours;
+                  } else if (subItem === '残業理由') {
+                    td.innerHTML = `<div class="text-gray-600 text-xs">${record.reason}</div>`;
+                  } else if (subItem === '清掃人数') {
+                    td.innerHTML = `<div class="text-gray-600 text-xs text-center">-</div>`;
+                  }
+                } else {
+                  td.innerHTML = '<div class="text-gray-400 text-center">-</div>';
+                }
+
+                tr.appendChild(td);
+              });
+
+              // 週合計セル
+              const weekTotalCell = document.createElement('td');
+              weekTotalCell.className = 'border border-gray-300 px-3 py-3 text-center font-semibold text-sm bg-yellow-50 week-total-column';
+              if (subItem === '残業') {
+                weekTotalCell.textContent = weekTotal > 0 ? `${weekTotal.toFixed(1)}h` : '-';
+                monthTotal += weekTotal;
+              } else {
+                weekTotalCell.textContent = '-';
+              }
+              tr.appendChild(weekTotalCell);
+            });
+
+            // 月合計セル（残業のみ表示）
+            const totalCell = document.createElement('td');
+            totalCell.className = 'border border-gray-300 px-4 py-3 text-center font-semibold text-sm bg-blue-50';
+            if (subItem === '残業') {
+              totalCell.textContent = monthTotal > 0 ? `${monthTotal.toFixed(1)}h` : '-';
+            } else {
+              totalCell.textContent = '-';
+            }
+            tr.appendChild(totalCell);
+
+            tbody.appendChild(tr);
+          });
+        } else {
+          // 小項目がない場合（従来通り）
+          const tr = document.createElement('tr');
+
+          // 項目セル
+          const shiftCell = document.createElement('td');
+          shiftCell.className = 'border border-gray-300 px-4 py-3 bg-gray-50 font-medium text-sm text-center sticky left-0 z-10 bg-gray-50';
+          shiftCell.textContent = shift.name;
+          tr.appendChild(shiftCell);
+
+          // 小項目セル（空）
+          const emptySubItemCell = document.createElement('td');
+          emptySubItemCell.className = 'border border-gray-300 px-3 py-3 bg-gray-50 text-xs text-center';
+          emptySubItemCell.textContent = '-';
+          tr.appendChild(emptySubItemCell);
+
+          let monthTotal = 0;
+
+          // 各週の日付セルと週合計セル
+          weeks.forEach((weekDates, weekIndex) => {
+            let weekTotal = 0;
+
+            // 週の各日付のセル
+            weekDates.forEach(date => {
+              const dateStr = date.toISOString().split('T')[0];
+              const records = data.filter(r => r.date === dateStr && r.shift === shift.name);
+              const td = document.createElement('td');
+              td.className = `border border-gray-300 px-2 py-3 text-xs date-column week-${weekIndex}`;
+
+              if (records.length > 0) {
+                const record = records[0];
+                const todayRecord = isToday(record.date);
+                weekTotal += record.hours;
+
+                if (todayRecord) {
+                  td.className += ' cursor-pointer hover:bg-blue-50';
+                  td.onclick = () => editOvertime(record.id);
+                }
+
+                td.innerHTML = `
+                  <div class="flex flex-col gap-1">
+                    <div class="font-semibold text-blue-600">${record.hours.toFixed(1)}h</div>
+                    <div class="text-gray-600 text-xs break-words">${record.reason}</div>
+                  </div>
+                `;
+              } else {
+                td.innerHTML = '<div class="text-gray-400 text-center">-</div>';
+              }
+
+              tr.appendChild(td);
+            });
+
+            // 週合計セル
+            const weekTotalCell = document.createElement('td');
+            weekTotalCell.className = 'border border-gray-300 px-3 py-3 text-center font-semibold text-sm bg-yellow-50 week-total-column';
+            weekTotalCell.textContent = weekTotal > 0 ? `${weekTotal.toFixed(1)}h` : '-';
+            tr.appendChild(weekTotalCell);
+
+            monthTotal += weekTotal;
+          });
+
+          // 月合計セル
+          const totalCell = document.createElement('td');
+          totalCell.className = 'border border-gray-300 px-4 py-3 text-center font-semibold text-sm bg-blue-50';
+          totalCell.textContent = monthTotal > 0 ? `${monthTotal.toFixed(1)}h` : '-';
+          tr.appendChild(totalCell);
+
+          tbody.appendChild(tr);
+        }
+      });
+
+      // 合計行を追加（3つの小項目）
+      const totalSubItems = ['残業時間', '清掃数','タイミー時間', '達成率'];
+
+      totalSubItems.forEach((subItem, subIndex) => {
+        const totalRow = document.createElement('tr');
+        totalRow.className = 'bg-blue-50';
+
+        // 項目セル（最初の小項目のみ表示、rowspanで結合）
+        if (subIndex === 0) {
+          const totalShiftCell = document.createElement('td');
+          totalShiftCell.className = 'border border-gray-300 px-4 py-3 bg-blue-100 font-bold text-sm text-center sticky left-0 z-10';
+          totalShiftCell.textContent = '合計';
+          totalShiftCell.rowSpan = totalSubItems.length;
+          totalRow.appendChild(totalShiftCell);
+        }
+
+        // 小項目セル
+        const totalSubItemCell = document.createElement('td');
+        totalSubItemCell.className = 'border border-gray-300 px-3 py-3 bg-blue-100 text-xs text-center font-medium';
+        totalSubItemCell.textContent = subItem;
+        totalRow.appendChild(totalSubItemCell);
+
+        // 各週の日付セルと週合計セル
+        let monthGrandTotal = 0;
+        weeks.forEach((weekDates, weekIndex) => {
+          let weekGrandTotal = 0;
+
+          // 週の各日付のセル
+          weekDates.forEach(date => {
+            const dateStr = date.toISOString().split('T')[0];
+            const dayRecords = data.filter(r => r.date === dateStr);
+            const td = document.createElement('td');
+            td.className = `border border-gray-300 px-2 py-3 text-center text-sm date-column week-${weekIndex}`;
+
+            if (subItem === '残業時間') {
+              const dayTotal = dayRecords.reduce((sum, r) => sum + r.hours, 0);
+              td.className += ' font-bold';
+              td.textContent = dayTotal > 0 ? `${dayTotal.toFixed(1)}h` : '-';
+              weekGrandTotal += dayTotal;
+            } else if (subItem === '清掃数') {
+              // 清掃数は後で実装（現在は仮のデータ）
+              td.textContent = '-';
+            } else if (subItem === '達成率') {
+              // 達成率は後で実装（現在は仮のデータ）
+              td.textContent = '-';
+            }
+
+            totalRow.appendChild(td);
+          });
+
+          // 週合計セル
+          const weekTotalCell = document.createElement('td');
+          weekTotalCell.className = 'border border-gray-300 px-3 py-3 text-center text-sm bg-yellow-100 font-bold week-total-column';
+          if (subItem === '残業時間') {
+            weekTotalCell.textContent = weekGrandTotal > 0 ? `${weekGrandTotal.toFixed(1)}h` : '-';
+            monthGrandTotal += weekGrandTotal;
+          } else {
+            weekTotalCell.textContent = '-';
+          }
+          totalRow.appendChild(weekTotalCell);
+        });
+
+        // 月合計列のセル
+        const totalCell = document.createElement('td');
+        totalCell.className = 'border border-gray-300 px-4 py-3 text-center text-sm bg-blue-100';
+
+        if (subItem === '残業時間') {
+          totalCell.className += ' font-bold';
+          totalCell.textContent = monthGrandTotal > 0 ? `${monthGrandTotal.toFixed(1)}h` : '-';
+        } else if (subItem === '清掃数') {
+          totalCell.textContent = '-';
+        } else if (subItem === '達成率') {
+          totalCell.textContent = '-';
+        }
+
+        totalRow.appendChild(totalCell);
+        tbody.appendChild(totalRow);
+      });
+    }
+
+    // Edit overtime record
+    function editOvertime(id) {
+      const record = overtimeData.find(r => r.id === id);
+      if (!record) return;
+
+      currentEditId = id;
+      document.getElementById('editDate').value = record.date;
+      document.getElementById('editShift').value = record.shift;
+      document.getElementById('editHours').value = record.hours;
+      document.getElementById('editReason').value = record.reason;
+
+      document.getElementById('editModal').classList.add('active');
+    }
+
+    // Close edit modal
+    function closeEditModal() {
+      document.getElementById('editModal').classList.remove('active');
+      currentEditId = null;
+    }
+
+    // Save overtime edit
+    function saveOvertimeEdit() {
+      if (!currentEditId) return;
+
+      const record = overtimeData.find(r => r.id === currentEditId);
+      if (!record) return;
+
+      record.shift = document.getElementById('editShift').value;
+      record.hours = parseFloat(document.getElementById('editHours').value);
+      record.reason = document.getElementById('editReason').value;
+
+      closeEditModal();
+      filterOvertimeData();
+
+      // Show success message (optional)
+      alert('残業記録を更新しました');
+    }
+
+    // Close modal when clicking outside
+    document.getElementById('editModal').addEventListener('click', function(e) {
+      if (e.target === this) {
+        closeEditModal();
+      }
+    });
+
+    // 日付列のトグル
+    function toggleDateColumns() {
+      const dateColumns = document.querySelectorAll('.date-column');
+      const weekTotalColumns = document.querySelectorAll('.week-total-column');
+      const icon = document.getElementById('dateColumnIcon');
+
+      dateColumns.forEach(col => {
+        if (col.style.display === 'none') {
+          col.style.display = '';
+          icon.style.transform = 'rotate(0deg)';
+        } else {
+          col.style.display = 'none';
+          icon.style.transform = 'rotate(-90deg)';
+        }
+      });
+
+      // 週合計列も同様にトグル
+      weekTotalColumns.forEach(col => {
+        if (col.style.display === 'none') {
+          col.style.display = '';
+        } else {
+          col.style.display = 'none';
+        }
+      });
+    }
+
+    // 週ごとの折りたたみ
+    function toggleWeek(weekIndex) {
+      const weekColumns = document.querySelectorAll(`.week-${weekIndex}`);
+      const icon = document.getElementById(`weekIcon${weekIndex}`);
+
+      weekColumns.forEach(col => {
+        if (col.style.display === 'none') {
+          col.style.display = '';
+          icon.style.transform = 'rotate(0deg)';
+        } else {
+          col.style.display = 'none';
+          icon.style.transform = 'rotate(-90deg)';
+        }
+      });
+    }
+
+    // タブ切り替え
+    function switchTab(tabName) {
+      // 全てのタブボタンとコンテンツからactiveクラスを削除
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // クリックされたタブボタンとコンテンツにactiveクラスを追加
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    // Sidebar toggle functions
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const icon = document.getElementById('sidebarIcon');
+      sidebar.classList.toggle('closed');
+
+      // アイコンの向きを変更
+      if (sidebar.classList.contains('closed')) {
+        icon.style.transform = 'rotate(180deg)';
+      } else {
+        icon.style.transform = 'rotate(0deg)';
+      }
+    }
+
+    // 4ZEROセクションの折りたたみ
+    function toggleFourZero() {
+      const content = document.getElementById('fourZeroContent');
+      const icon = document.getElementById('fourZeroIcon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+
+    // エリア別セクションの折りたたみ
+    function toggleArea() {
+      const content = document.getElementById('areaContent');
+      const icon = document.getElementById('areaIcon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+
+    // サイドバーエリアの折りたたみ
+    function toggleSidebarArea(area) {
+      const content = document.getElementById(area + 'Content');
+      const icon = document.getElementById(area + 'Icon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+
+    // 月別フィルタリングと統計更新
+    /*
+    function filterOvertimeByMonth() {
+      const selectedMonth = document.getElementById('overtime-month-filter').value;
+
+      // 選択月のデータを取得
+      const currentMonthData = overtimeData.filter(record => record.date.startsWith(selectedMonth));
+
+      // 前月を計算
+      const [year, month] = selectedMonth.split('-').map(Number);
+      const prevMonth = month === 1 ? `${year - 1}-12` : `${year}-${String(month - 1).padStart(2, '0')}`;
+      const prevMonthData = overtimeData.filter(record => record.date.startsWith(prevMonth));
+
+      // 選択月の日数を計算
+      const currentMonthDays = new Date(year, month, 0).getDate();
+      const [prevYear, prevMonthNum] = prevMonth.split('-').map(Number);
+      const prevMonthDays = new Date(prevYear, prevMonthNum, 0).getDate();
+
+      // 選択月の統計計算
+      const currentCount = currentMonthData.length;
+      const currentTotalHours = currentMonthData.reduce((sum, r) => sum + r.hours, 0);
+      const currentAvgDailyCount = currentCount / currentMonthDays;
+      const currentAvgDailyHours = currentTotalHours / currentMonthDays;
+      const currentAvgPerSession = currentCount > 0 ? currentTotalHours / currentCount : 0;
+
+      // 最多時間帯を計算
+      const shiftCounts = {};
+      currentMonthData.forEach(r => {
+        shiftCounts[r.shift] = (shiftCounts[r.shift] || 0) + 1;
+      });
+      const mostCommonShift = Object.keys(shiftCounts).length > 0
+        ? Object.entries(shiftCounts).sort((a, b) => b[1] - a[1])[0][0]
+        : '-';
+
+      // 前月の統計計算
+      const prevCount = prevMonthData.length;
+      const prevTotalHours = prevMonthData.reduce((sum, r) => sum + r.hours, 0);
+      const prevAvgDailyCount = prevCount / prevMonthDays;
+      const prevAvgDailyHours = prevTotalHours / prevMonthDays;
+      const prevAvgPerSession = prevCount > 0 ? prevTotalHours / prevCount : 0;
+
+      // 前月比を計算
+      const countDiff = currentAvgDailyCount - prevAvgDailyCount;
+      const countPercent = prevAvgDailyCount > 0 ? (countDiff / prevAvgDailyCount) * 100 : 0;
+
+      const hoursDiff = currentAvgDailyHours - prevAvgDailyHours;
+      const hoursPercent = prevAvgDailyHours > 0 ? (hoursDiff / prevAvgDailyHours) * 100 : 0;
+
+      const sessionDiff = currentAvgPerSession - prevAvgPerSession;
+      const sessionPercent = prevAvgPerSession > 0 ? (sessionDiff / prevAvgPerSession) * 100 : 0;
+
+      // DOMを更新
+      document.getElementById('avgDailyCount').textContent = currentAvgDailyCount.toFixed(1) + '回';
+      document.getElementById('avgHoursPerSession').textContent = currentAvgPerSession.toFixed(1) + 'h';
+      document.getElementById('mostCommonShift').textContent = mostCommonShift;
+
+      // 前月比の表示を更新
+      const countDiffEl = document.getElementById('avgDailyCountDiff');
+      const arrow = countDiff >= 0 ? '↑' : '↓';
+      const color = countDiff >= 0 ? 'text-red-600' : 'text-green-600';
+      countDiffEl.innerHTML = `<span class="${color}">${arrow} ${countDiff >= 0 ? '+' : ''}${countDiff.toFixed(1)} (${countPercent.toFixed(1)}%)</span>`;
+
+      const sessionDiffEl = document.getElementById('avgHoursPerSessionDiff');
+      const sessionArrow = sessionDiff >= 0 ? '↑' : '↓';
+      const sessionColor = sessionDiff >= 0 ? 'text-red-600' : 'text-green-600';
+      sessionDiffEl.innerHTML = `<span class="${sessionColor}">${sessionArrow} ${sessionDiff >= 0 ? '+' : ''}${sessionDiff.toFixed(1)}h (${sessionPercent.toFixed(1)}%)</span>`;
+    }
+    */
+
+    // グラフインスタンスを保持
+    let overtimeChartInstance = null;
+    let cleaningChartInstance = null;
+    let shiftOvertimeChartInstance = null;
+
+    // 残業時間グラフのデータ取得
+    function getOvertimeChartData(aggregation) {
+      let labels, data, morningData, dayData, eveningData, nightData;
+
+      switch(aggregation) {
+        case 'daily':
+          labels = Array.from({length: 15}, (_, i) => (i + 1) + '日');
+          data = [7.0, 5.5, 8.5, 5.0, 9.5, 6.0, 6.5, 8.0, 4.5, 7.0, 10.0, 5.5, 8.0, 5.0, 6.5];
+          morningData = [1.5, 1.0, 2.0, 1.0, 2.5, 1.5, 1.5, 2.0, 1.0, 1.5, 2.5, 1.0, 2.0, 1.0, 1.5];
+          dayData = [2.0, 1.5, 2.5, 1.5, 2.5, 1.5, 2.0, 2.0, 1.0, 2.0, 2.5, 1.5, 2.0, 1.5, 1.5];
+          eveningData = [2.0, 1.5, 2.0, 1.0, 2.0, 1.5, 1.5, 2.0, 1.0, 2.0, 2.5, 1.5, 2.0, 1.0, 2.0];
+          nightData = [1.5, 1.5, 2.0, 1.5, 2.5, 1.5, 1.5, 2.0, 1.5, 1.5, 2.5, 1.5, 2.0, 1.5, 1.5];
+          break;
+        case 'weekly':
+          labels = ['第1週', '第2週', '第3週', '第4週'];
+          data = [33.5, 39.0, 37.5, 31.5];
+          morningData = [8.5, 10.0, 9.5, 8.0];
+          dayData = [9.0, 11.0, 10.0, 8.5];
+          eveningData = [8.0, 9.0, 9.0, 7.5];
+          nightData = [8.0, 9.0, 9.0, 7.5];
+          break;
+        case 'monthly':
+          labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+          data = [125, 116, 133, 121, 137, 129, 118, 131, 125, 135, 141, 134];
+          morningData = [30, 28, 33, 29, 34, 31, 29, 32, 30, 33, 35, 33];
+          dayData = [35, 32, 38, 34, 39, 36, 33, 37, 35, 38, 40, 38];
+          eveningData = [30, 28, 31, 29, 32, 31, 28, 31, 30, 32, 33, 31];
+          nightData = [30, 28, 31, 29, 32, 31, 28, 31, 30, 32, 33, 32];
+          break;
+        case 'byshift':
+          labels = ['早番', '中番', '遅番', '夜番'];
+          morningData = [35.5];
+          dayData = [42.0];
+          eveningData = [52.5];
+          nightData = [48.0];
+          break;
+        default:
+          labels = [];
+          data = [];
+      }
+
+      return { labels, data, morningData, dayData, eveningData, nightData };
+    }
+
+    // 清掃達成率グラフのデータ取得
+    function getCleaningChartData(aggregation) {
+      let labels, data, averageData;
+
+      switch(aggregation) {
+        case 'daily':
+          labels = Array.from({length: 15}, (_, i) => (i + 1) + '日');
+          data = [88, 85, 90, 87, 92, 86, 89, 91, 84, 88, 93, 87, 90, 85, 88];
+          averageData = Array(15).fill(87.5);
+          break;
+        case 'weekly':
+          labels = ['第1週', '第2週', '第3週', '第4週'];
+          data = [87.5, 89.0, 88.2, 86.8];
+          averageData = Array(4).fill(87.9);
+          break;
+        case 'monthly':
+          labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+          data = [85, 83, 88, 86, 90, 88, 85, 89, 87, 91, 92, 90];
+          averageData = Array(12).fill(87.8);
+          break;
+        default:
+          labels = [];
+          data = [];
+          averageData = [];
+      }
+
+      return { labels, data, averageData };
+    }
+
+    // 残業時間グラフの更新
+    function updateOvertimeChart() {
+      const ctx = document.getElementById('overtimeChart');
+      if (!ctx) return;
+
+      const aggregation = document.getElementById('overtimeChartAggregation').value;
+      const { labels, data, morningData, dayData, eveningData, nightData } = getOvertimeChartData(aggregation);
+
+      // タイトルを更新
+      const title = document.getElementById('overtimeChartTitle');
+      if (aggregation === 'byshift') {
+        title.textContent = '時間帯別残業時間（当月累計）';
+      } else {
+        title.textContent = '残業時間 当月推移';
+      }
+
+      if (overtimeChartInstance) {
+        overtimeChartInstance.destroy();
+      }
+
+      // 時間帯別の場合は異なるデータセット構造
+      let datasets;
+      if (aggregation === 'byshift') {
+        datasets = [
+          {
+            label: '早番',
+            data: morningData,
+            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+            borderColor: 'rgb(59, 130, 246)',
+            borderWidth: 1
+          },
+          {
+            label: '中番',
+            data: dayData,
+            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+            borderColor: 'rgb(34, 197, 94)',
+            borderWidth: 1
+          },
+          {
+            label: '遅番',
+            data: eveningData,
+            backgroundColor: 'rgba(168, 85, 247, 0.7)',
+            borderColor: 'rgb(168, 85, 247)',
+            borderWidth: 1
+          },
+          {
+            label: '夜番',
+            data: nightData,
+            backgroundColor: 'rgba(239, 68, 68, 0.7)',
+            borderColor: 'rgb(239, 68, 68)',
+            borderWidth: 1
+          }
+        ];
+      } else {
+        // 日次/週次/月次の場合は棒グラフ(合計)+ 折れ線グラフ(時間帯別)
+        datasets = [
+          {
+            type: 'bar',
+            label: '合計',
+            data: data,
+            backgroundColor: 'rgba(99, 102, 241, 0.5)',
+            borderColor: 'rgb(99, 102, 241)',
+            borderWidth: 1,
+            order: 2
+          },
+          {
+            type: 'line',
+            label: '早番',
+            data: morningData,
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.4,
+            order: 1
+          },
+          {
+            type: 'line',
+            label: '中番',
+            data: dayData,
+            borderColor: 'rgb(34, 197, 94)',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.4,
+            order: 1
+          },
+          {
+            type: 'line',
+            label: '遅番',
+            data: eveningData,
+            borderColor: 'rgb(168, 85, 247)',
+            backgroundColor: 'rgba(168, 85, 247, 0.1)',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.4,
+            order: 1
+          },
+          {
+            type: 'line',
+            label: '夜番',
+            data: nightData,
+            borderColor: 'rgb(239, 68, 68)',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            borderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            tension: 0.4,
+            order: 1
+          }
+        ];
+      }
+
+      overtimeChartInstance = new Chart(ctx, {
+        type: aggregation === 'byshift' ? 'bar' : 'bar',
+        data: {
+          labels: labels,
+          datasets: datasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 15,
+                font: { size: 12 }
+              }
+            },
+            tooltip: {
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + context.parsed.y + 'h';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              title: {
+                display: true,
+                text: '時間 (h)'
+              },
+              ticks: {
+                stepSize: aggregation === 'monthly' ? 20 : (aggregation === 'weekly' ? 5 : 2),
+                font: { size: 11 }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            x: {
+              ticks: {
+                font: { size: 11 }
+              },
+              grid: {
+                display: false
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 清掃達成率グラフの更新
+    function updateCleaningChart() {
+      const ctx = document.getElementById('cleaningChart');
+      if (!ctx) return;
+
+      const aggregation = document.getElementById('cleaningChartAggregation').value;
+      const { labels, data, averageData } = getCleaningChartData(aggregation);
+
+      if (cleaningChartInstance) {
+        cleaningChartInstance.destroy();
+      }
+
+      cleaningChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '達成率',
+            data: data,
+            borderColor: 'rgb(34, 197, 94)',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2
+          }, {
+            label: '平均値',
+            data: averageData,
+            borderColor: 'rgb(239, 68, 68)',
+            backgroundColor: 'transparent',
+            borderDash: [5, 5],
+            tension: 0,
+            pointRadius: 0,
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                font: { size: 12 }
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  return context.dataset.label + ': ' + context.parsed.y + '%';
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100,
+              title: {
+                display: true,
+                text: '達成率 (%)'
+              },
+              ticks: {
+                stepSize: 10,
+                font: { size: 11 },
+                callback: function(value) {
+                  return value + '%';
+                }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            x: {
+              ticks: {
+                font: { size: 11 }
+              },
+              grid: {
+                display: false
+              }
+            }
+          },
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          }
+        }
+      });
+    }
+
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      // デフォルトで2週間分のデータを表示
+      setOvertimePeriod('monthly');
+      // データをフィルタリングして表示
+      filterOvertimeData();
+      // グラフを初期化
+      updateOvertimeChart();
+      updateCleaningChart();
+    });
+  </script>
+</body>
+</html>

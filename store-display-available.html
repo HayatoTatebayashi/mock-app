@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>4ZERO-APP - 売止め管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    }
+    /* Sidebar styles */
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 64px;
+      height: calc(100vh - 64px);
+      background: #e8e8e8;
+      transition: all 0.3s ease;
+      overflow-y: auto;
+      overflow-x: hidden;
+      z-index: 40;
+    }
+    .sidebar.collapsed {
+      width: 64px;
+    }
+    .sidebar-toggle {
+      position: absolute;
+      right: -12px;
+      top: 20px;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 50;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .sidebar.collapsed .sidebar-toggle svg {
+      transform: rotate(180deg);
+    }
+    .sidebar-icons {
+      display: none;
+      padding: 1rem 0;
+    }
+    .sidebar.collapsed .sidebar-icons {
+      display: block;
+    }
+    .sidebar.collapsed nav {
+      display: none;
+    }
+    .sidebar-icon-item {
+      padding: 0.75rem;
+      margin: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      border-radius: 0.5rem;
+      color: #4b5563;
+      transition: all 0.2s;
+    }
+    .sidebar-icon-item:hover {
+      background: #d1d5db;
+    }
+    .sidebar-icon-item.active {
+      background: white;
+      color: #2e4265;
+    }
+    .content-wrapper {
+      margin-left: 128px;
+      margin-top: 64px;
+      transition: margin-left 0.3s ease;
+    }
+    .sidebar.collapsed ~ .content-wrapper {
+      margin-left: 64px;
+    }
+    .main-content {
+      min-height: calc(100vh - 64px);
+    }
+    /* タブスタイル */
+    .tab-container {
+      border-bottom: 2px solid #e5e7eb;
+      margin-bottom: 2rem;
+    }
+    .tab-list {
+      display: flex;
+      gap: 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+    .tab-button {
+      padding: 0.5rem 1rem;
+      background: #f3f4f6;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #6b7280;
+      transition: all 0.2s;
+    }
+    .tab-button:hover {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .tab-button.active {
+      background: white;
+      color: #2e4265;
+      border-bottom-color: #2e4265;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+  <!-- ヘッダー -->
+  <header class="bg-[#2e4265] text-white px-6 py-4 flex items-center justify-between h-16 fixed top-0 left-0 right-0 z-50">
+    <div class="flex items-center gap-4">
+      <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-[#3d5278] rounded">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+      <h1 class="text-2xl font-bold">4ZERO-APP</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="text-right">
+        <div class="text-sm">山田 太郎</div>
+        <div class="text-xs text-gray-300">user@squeeze.co.jp</div>
+      </div>
+      <button class="bg-white text-[#2e4265] px-4 py-2 rounded hover:bg-gray-100">
+        管理画面
+      </button>
+    </div>
+  </header>
+
+  <!-- サイドバー -->
+  <aside id="sidebar" class="sidebar w-32 bg-[#e8e8e8]">
+      <!-- 開閉ボタン -->
+      <button class="sidebar-toggle" onclick="toggleSidebar()">
+        <svg id="sidebarIcon" class="w-5 h-5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+
+      <!-- 閉じた時のアイコンメニュー -->
+      <div class="sidebar-icons">
+        <div class="sidebar-icon-item" onclick="location.href='store-display.html'" title="ダッシュボード">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+          </svg>
+        </div>
+        <div class="sidebar-icon-item active" title="売止め管理">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        </div>
+      </div>
+
+      <nav>
+        <!-- 4ZERO 親トグル -->
+        <div class="mb-2">
+          <button onclick="toggleFourZero()" class="w-full flex items-center justify-between p-3 hover:bg-gray-300 rounded font-bold">
+            <span>4ZERO</span>
+            <svg id="fourZeroIcon" class="w-4 h-4 transition-transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+
+          <div id="fourZeroContent" class="ml-4 mt-1">
+            <!-- 全施設 -->
+            <div class="p-2 pl-4 font-semibold">
+              全施設
+            </div>
+
+            <!-- ダッシュボード -->
+            <a href="store-display.html" class="block p-2 pl-4 hover:bg-gray-300 rounded ml-4 text-sm">
+              ダッシュボード
+            </a>
+
+            <!-- 売止め管理 -->
+            <a href="store-display-available.html" class="block p-2 pl-4 bg-white rounded ml-4 text-sm font-semibold">
+              売止め管理
+            </a>
+          </div>
+        </div>
+      </nav>
+    </aside>
+
+  <!-- メインコンテンツ -->
+  <div class="content-wrapper">
+    <main class="main-content p-6">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-2xl font-bold"><span id="storeName">Minn 日本橋</span>： 売止め管理</h2>
+
+        <!-- 操作ボタン -->
+        <div class="flex gap-4">
+          <button onclick="openOvertimeModal()" class="text-sm border-2 px-3 py-2 rounded-md transition-colors font-medium" style="color: #4169e1; border-color: #4169e1;" onmouseover="this.style.backgroundColor='#f0f4ff'" onmouseout="this.style.backgroundColor='white'">
+            残業入力
+          </button>
+          <button onclick="openComplaintModal()" class="text-sm bg-white border-2 px-3 py-2 rounded-md transition-colors font-medium" style="color: #f4a460; border-color: #f4a460;" onmouseover="this.style.backgroundColor='#fef6f0'" onmouseout="this.style.backgroundColor='white'">
+            施設クレーム入力
+          </button>
+          <button onclick="openCleaningModal()" class="text-sm bg-white border-2 px-3 py-2 rounded-md transition-colors font-medium" style="color: #66cdaa; border-color: #66cdaa;" onmouseover="this.style.backgroundColor='#f0faf6'" onmouseout="this.style.backgroundColor='white'">
+            清掃人数入力
+          </button>
+        </div>
+      </div>
+
+      <!-- タブナビゲーション -->
+      <div class="tab-container">
+        <div class="tab-list">
+          <button class="tab-button active" onclick="switchTab('dashboard')">ダッシュボード</button>
+          <button class="tab-button" onclick="switchTab('uridome')">売止め</button>
+        </div>
+      </div>
+
+      <!-- タブコンテンツ: ダッシュボード -->
+      <section class="tab-content active" id="tab-dashboard">
+
+      <!-- 当日の内容一覧 -->
+      <div class="bg-white rounded-lg shadow px-6 py-3">
+        <div class="flex items-center justify-between mb-4 pb-2 border-b-2 border-gray-300">
+          <h3 class="text-xl font-bold">当日の内容一覧</h3>
+
+          <!-- 日付選択 -->
+          <div class="flex items-center gap-3">
+            <button onclick="changeDate(-1)" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <input type="date" id="selectedDate" class="border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium" onchange="loadDateData()">
+            <button onclick="changeDate(1)" class="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button onclick="setToday()" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors">
+              今日
+            </button>
+          </div>
+        </div>
+
+        <!-- 売止め数 -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-lg font-semibold flex items-center gap-2">
+              <span class="w-1 h-6 bg-blue-500"></span>
+              売止め数
+            </h4>
+            <div class="flex items-baseline gap-2">
+              <span class="text-sm text-gray-600">合計:</span>
+              <span class="text-2xl font-bold text-blue-600" id="uridome-total">4件</span>
+              <span class="text-xs text-gray-500">(前月平均: 4.0件/日)</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 ml-4">
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-600 mb-1">清掃</div>
+              <div class="flex items-baseline gap-2">
+                <div class="text-2xl font-bold text-blue-600" id="uridome-clean">3件</div>
+                <div class="text-sm text-gray-500">前月平均: 2.8件</div>
+              </div>
+            </div>
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <div class="text-sm text-gray-600 mb-1">設備・その他</div>
+              <div class="flex items-baseline gap-2">
+                <div class="text-2xl font-bold text-blue-600" id="uridome-other">1件</div>
+                <div class="text-sm text-gray-500">前月平均: 1.2件</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 残業 -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-lg font-semibold flex items-center gap-2">
+              <span class="w-1 h-6 bg-indigo-500"></span>
+              残業
+            </h4>
+            <div class="flex items-baseline gap-2">
+              <span class="text-sm text-gray-600">合計:</span>
+              <span class="text-2xl font-bold text-indigo-600" id="overtime-total">3.5時間</span>
+              <span class="text-xs text-gray-500">(前月平均: 2.5時間/日)</span>
+            </div>
+          </div>
+          <div class="ml-4 space-y-3" id="overtimeList">
+            <div class="border border-gray-200 rounded-lg p-4">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex gap-4">
+                  <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded text-sm font-medium">早番</span>
+                  <span class="font-semibold">山田太郎</span>
+                </div>
+                <span class="text-lg font-bold text-indigo-600">2.5時間</span>
+              </div>
+              <div class="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                理由: チェックイン対応の遅延により残業
+              </div>
+            </div>
+            <div class="border border-gray-200 rounded-lg p-4">
+              <div class="flex justify-between items-start mb-2">
+                <div class="flex gap-4">
+                  <span class="bg-green-100 text-green-800 px-3 py-1 rounded text-sm font-medium">中番</span>
+                  <span class="font-semibold">佐藤花子</span>
+                </div>
+                <span class="text-lg font-bold text-indigo-600">1.0時間</span>
+              </div>
+              <div class="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                理由: 清掃スタッフ不足のため
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- クレーム -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-lg font-semibold flex items-center gap-2">
+              <span class="w-1 h-6 bg-rose-500"></span>
+              クレーム
+            </h4>
+            <div class="flex items-baseline gap-2">
+              <span class="text-sm text-gray-600">件数:</span>
+              <span class="text-2xl font-bold text-rose-600" id="complaintCount">2件</span>
+              <span class="text-xs text-gray-500">(前月平均: 1.8件/日)</span>
+            </div>
+          </div>
+          <div class="ml-4 space-y-3" id="complaintList">
+            <div class="border border-rose-200 bg-rose-50 rounded-lg p-4">
+              <div class="flex justify-between items-start mb-2">
+                <div class="font-semibold text-rose-900">部屋の清掃不備</div>
+                <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">電話</span>
+              </div>
+              <div class="text-sm text-gray-700 mb-1">クレーム者: 田中様</div>
+              <div class="text-sm text-gray-600 bg-white p-2 rounded">
+                浴室の髪の毛が残っていた。すぐに清掃対応を実施。
+              </div>
+            </div>
+            <div class="border border-rose-200 bg-rose-50 rounded-lg p-4">
+              <div class="flex justify-between items-start mb-2">
+                <div class="font-semibold text-rose-900">Wi-Fiが繋がらない</div>
+                <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">直接</span>
+              </div>
+              <div class="text-sm text-gray-700 mb-1">クレーム者: 鈴木様</div>
+              <div class="text-sm text-gray-600 bg-white p-2 rounded">
+                ルーター再起動で解決。お詫びの品を提供。
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 清掃基準値 -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-lg font-semibold flex items-center gap-2">
+              <span class="w-1 h-6 bg-emerald-500"></span>
+              清掃基準値
+            </h4>
+            <div class="flex items-baseline gap-2">
+              <span class="text-sm text-gray-600">達成率:</span>
+              <span class="text-2xl font-bold text-emerald-600" id="cleaning-achievement-rate">95.8%</span>
+              <span class="text-xs text-green-600" id="cleaning-achievement-diff">↑ +3.2%</span>
+            </div>
+          </div>
+          <div class="ml-4">
+            <div class="bg-gray-50 p-4 rounded-lg mb-4">
+              <div class="text-sm text-gray-600 mb-1">総清掃数（室）</div>
+              <div class="flex items-baseline gap-2">
+                <div class="text-2xl font-bold text-emerald-600" id="totalRooms">24室</div>
+                <div class="text-sm text-gray-500">前月平均: 22.5室</div>
+              </div>
+            </div>
+            <div class="grid grid-cols-3 gap-4">
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="text-sm text-gray-600 mb-1">早番</div>
+                <div class="flex items-baseline gap-2">
+                  <div class="text-xl font-bold text-emerald-600" id="cleaning-morning">3人</div>
+                  <div class="text-xs text-gray-500">前月: 2.8人</div>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">入力者: 管理者</div>
+              </div>
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="text-sm text-gray-600 mb-1">中番</div>
+                <div class="flex items-baseline gap-2">
+                  <div class="text-xl font-bold text-emerald-600" id="cleaning-day">2人</div>
+                  <div class="text-xs text-gray-500">前月: 2.1人</div>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">入力者: 管理者</div>
+              </div>
+              <div class="border border-gray-200 rounded-lg p-4">
+                <div class="text-sm text-gray-600 mb-1">スポット</div>
+                <div class="flex items-baseline gap-2">
+                  <div class="text-xl font-bold text-emerald-600" id="cleaning-spot">1人</div>
+                  <div class="text-xs text-gray-500">前月: 0.9人</div>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">入力者: 管理者</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      </section>
+
+      <!-- タブコンテンツ: 売止め -->
+      <section class="tab-content" id="tab-uridome">
+
+        <!-- 売止め数推移グラフ -->
+        <div class="bg-white rounded-lg shadow mb-6">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-xl font-bold">売止め数 当月推移</h3>
+            <div class="flex items-center gap-2">
+              <label class="text-sm font-medium">表示単位:</label>
+              <select id="chartAggregation" class="border border-gray-300 rounded px-3 py-2 text-sm" onchange="updateChart()">
+                <option value="daily">日次</option>
+                <option value="weekly">週次</option>
+                <option value="monthly">月次</option>
+              </select>
+            </div>
+          </div>
+          <div class="p-6" style="height: 350px;">
+            <canvas id="uridomeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- 売止め一覧テーブル -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-end justify-between gap-4">
+            <h3 class="text-xl font-bold">売止め一覧</h3>
+
+            <!-- フィルターエリア -->
+            <div class="flex gap-4 items-end flex-wrap">
+              <!-- 対象期間 -->
+              <div>
+                <label class="block text-sm font-medium mb-1">対象期間</label>
+                <div class="flex gap-2 items-center">
+                  <input type="date" id="uridomeStartDate" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                  <span class="text-gray-500 text-sm">〜</span>
+                  <input type="date" id="uridomeEndDate" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                </div>
+              </div>
+
+              <!-- 集計単位 -->
+              <div>
+                <label class="block text-sm font-medium mb-1">集計単位</label>
+                <select id="uridomeAggregation" class="border border-gray-300 rounded px-3 py-2 text-sm">
+                  <option value="daily">日次</option>
+                  <option value="weekly">週次</option>
+                  <option value="monthly">月次</option>
+                </select>
+              </div>
+
+              <!-- 表示するボタン -->
+              <div>
+                <label class="block text-sm font-medium mb-1 opacity-0">.</label>
+                <button class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-medium text-sm" onclick="filterUridomeData()">
+                  表示する
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap border-r border-gray-300">日付</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap border-r border-gray-300">部屋番号</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider whitespace-nowrap border-r border-gray-300">カテゴリ</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">理由</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200" id="uridomeTableBody">
+                <!-- サンプルデータ -->
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">2024-11-14</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">101</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">清掃</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">長期滞在後の徹底清掃が必要</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">2024-11-14</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">203</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">
+                    <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">設備・その他</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">エアコン故障により修理待ち</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">2024-11-14</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">305</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">清掃</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">特別清掃対応（ペット利用後）</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">2024-11-13</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">402</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">
+                    <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-xs font-medium">設備・その他</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">給湯器交換作業</td>
+                </tr>
+                <tr>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">2024-11-13</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">201</td>
+                  <td class="px-4 py-3 whitespace-nowrap text-sm border-r border-gray-200">
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium">清掃</span>
+                  </td>
+                  <td class="px-4 py-3 text-sm">深夜チェックアウト後の清掃時間確保</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    // Sidebar toggle
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.classList.toggle('collapsed');
+    }
+
+    // 4ZERO toggle
+    function toggleFourZero() {
+      const content = document.getElementById('fourZeroContent');
+      const icon = document.getElementById('fourZeroIcon');
+      content.classList.toggle('hidden');
+      icon.classList.toggle('rotate-90');
+    }
+
+    // Tab switching
+    function switchTab(tabName) {
+      // すべてのタブボタンとコンテンツから active クラスを削除
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+      });
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+
+      // クリックされたタブボタンとコンテンツに active クラスを追加
+      event.target.classList.add('active');
+      document.getElementById('tab-' + tabName).classList.add('active');
+    }
+
+    // Date navigation functions
+    function changeDate(days) {
+      const dateInput = document.getElementById('selectedDate');
+      const currentDate = new Date(dateInput.value);
+      currentDate.setDate(currentDate.getDate() + days);
+      dateInput.value = currentDate.toISOString().split('T')[0];
+      loadDateData();
+    }
+
+    function setToday() {
+      const dateInput = document.getElementById('selectedDate');
+      const today = new Date();
+      dateInput.value = today.toISOString().split('T')[0];
+      loadDateData();
+    }
+
+    function loadDateData() {
+      // ここで日付に応じたデータを読み込む処理を実装
+      console.log('Loading data for:', document.getElementById('selectedDate').value);
+      // TODO: APIからデータを取得してUIを更新
+    }
+
+    // Modal functions (placeholders)
+    function openOvertimeModal() {
+      console.log('Open overtime modal');
+      // TODO: モーダル実装
+    }
+
+    function openComplaintModal() {
+      console.log('Open complaint modal');
+      // TODO: モーダル実装
+    }
+
+    function openCleaningModal() {
+      console.log('Open cleaning modal');
+      // TODO: モーダル実装
+    }
+
+    // 売止めデータフィルター
+    function filterUridomeData() {
+      const startDate = document.getElementById('uridomeStartDate').value;
+      const endDate = document.getElementById('uridomeEndDate').value;
+      const aggregation = document.getElementById('uridomeAggregation').value;
+
+      console.log('Filtering uridome data:', {
+        startDate,
+        endDate,
+        aggregation
+      });
+
+      // TODO: APIからデータを取得してテーブルを更新
+      // 集計単位に応じてデータを集計・表示
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+      // 4ZEROセクションを開く
+      const fourZeroContent = document.getElementById('fourZeroContent');
+      if (fourZeroContent) {
+        fourZeroContent.classList.remove('hidden');
+      }
+
+      // 今日の日付を設定（ダッシュボード）
+      const dateInput = document.getElementById('selectedDate');
+      if (dateInput) {
+        const today = new Date();
+        dateInput.value = today.toISOString().split('T')[0];
+      }
+
+      // 売止めタブの日付を設定（過去7日間）
+      const uridomeEndDate = document.getElementById('uridomeEndDate');
+      const uridomeStartDate = document.getElementById('uridomeStartDate');
+      if (uridomeEndDate && uridomeStartDate) {
+        const today = new Date();
+        const weekAgo = new Date(today);
+        weekAgo.setDate(today.getDate() - 7);
+
+        uridomeEndDate.value = today.toISOString().split('T')[0];
+        uridomeStartDate.value = weekAgo.toISOString().split('T')[0];
+      }
+
+      // 売止め数推移グラフを初期化
+      initUridomeChart();
+    });
+
+    // グラフインスタンスを保持
+    let uridomeChartInstance = null;
+
+    // 売止め数推移グラフの初期化
+    function initUridomeChart() {
+      const ctx = document.getElementById('uridomeChart');
+      if (!ctx) return;
+
+      // 初期表示は日次
+      updateChart();
+    }
+
+    // グラフデータの取得
+    function getChartData(aggregation) {
+      let labels, cleaningData, equipmentData;
+
+      switch(aggregation) {
+        case 'daily':
+          // 15日分
+          labels = Array.from({length: 15}, (_, i) => (i + 1) + '日');
+          cleaningData = [3, 2, 4, 3, 5, 2, 4, 3, 2, 4, 5, 3, 4, 2, 3];
+          equipmentData = [1, 2, 1, 2, 3, 1, 2, 1, 2, 1, 2, 2, 2, 1, 2];
+          break;
+        case 'weekly':
+          // 4週分
+          labels = ['第1週', '第2週', '第3週', '第4週'];
+          cleaningData = [12, 15, 13, 11];
+          equipmentData = [6, 8, 7, 5];
+          break;
+        case 'monthly':
+          // 12ヶ月分
+          labels = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+          cleaningData = [45, 42, 48, 44, 50, 46, 43, 47, 45, 49, 51, 48];
+          equipmentData = [22, 20, 24, 21, 26, 23, 20, 24, 22, 25, 27, 24];
+          break;
+        default:
+          labels = [];
+          cleaningData = [];
+          equipmentData = [];
+      }
+
+      return { labels, cleaningData, equipmentData };
+    }
+
+    // グラフの更新
+    function updateChart() {
+      const ctx = document.getElementById('uridomeChart');
+      if (!ctx) return;
+
+      const aggregation = document.getElementById('chartAggregation').value;
+      const { labels, cleaningData, equipmentData } = getChartData(aggregation);
+
+      // 既存のグラフがあれば破棄
+      if (uridomeChartInstance) {
+        uridomeChartInstance.destroy();
+      }
+
+      // 新しいグラフを作成
+      uridomeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '清掃',
+            data: cleaningData,
+            borderColor: 'rgb(59, 130, 246)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2
+          }, {
+            label: '設備・その他',
+            data: equipmentData,
+            borderColor: 'rgb(249, 115, 22)',
+            backgroundColor: 'rgba(249, 115, 22, 0.1)',
+            tension: 0.4,
+            fill: true,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                usePointStyle: true,
+                padding: 15,
+                font: {
+                  size: 12
+                }
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              padding: 10,
+              titleFont: {
+                size: 13
+              },
+              bodyFont: {
+                size: 12
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: aggregation === 'monthly' ? 10 : (aggregation === 'weekly' ? 2 : 1),
+                font: {
+                  size: 11
+                }
+              },
+              grid: {
+                color: 'rgba(0, 0, 0, 0.05)'
+              }
+            },
+            x: {
+              ticks: {
+                font: {
+                  size: 11
+                }
+              },
+              grid: {
+                display: false
+              }
+            }
+          },
+          interaction: {
+            mode: 'nearest',
+            axis: 'x',
+            intersect: false
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
